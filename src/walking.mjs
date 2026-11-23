@@ -45,5 +45,5 @@ export function walkingNetwork(buildings,placements,rotations){
  const approaches=entrances.filter(e=>graph.has(key(e.point))&&BUILDINGS[e.kind].residents).map(e=>{
   const building=placed.find(b=>b.id===e.id);return [point(key(e.point)),transform(building,0,.7)];
  });
- return {approaches,entrances,obstacles,edges:[...edges.values()],nodes:[...graph.keys()].map(point),route};
+ return {rotations,approaches,entrances,obstacles,edges:[...edges.values()],nodes:[...graph.keys()].map(point),route};
 }

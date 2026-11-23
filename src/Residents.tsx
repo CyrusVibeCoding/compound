@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import {BUILDINGS} from './city.mjs';
 import {greetingWorld,stepGreetings,type Neighbor} from './greetings.mjs';
 import type {walkingNetwork} from './walking.mjs';
+import {beginVisit,releaseVisit,parkActivity,parkPose,activityWorld} from './placeActivity.mjs';
 import {makeOuting,outingStops} from './outings.mjs';
 import type {BuildingInstance,Point} from './World';
 
@@ -18,17 +19,22 @@ const bagGeometry=new THREE.BoxGeometry(.25,.34,.16);
 const cupMaterial=new THREE.MeshStandardMaterial({color:'#f5ead5'});
 const lidMaterial=new THREE.MeshStandardMaterial({color:'#496a61'});
 const bagMaterial=new THREE.MeshStandardMaterial({color:'#bc8753'});
-function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,homeFacing}:{world:ReturnType<typeof greetingWorld>,homeFacing:number,outings:Outing[],homeId:string,resident:number,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,index:number,reduced:boolean}){
+function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,activity,parkRotations,homeFacing}:{activity:ReturnType<typeof activityWorld>,parkRotations:Record<string,number>,world:ReturnType<typeof greetingWorld>,homeFacing:number,outings:Outing[],homeId:string,resident:number,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,index:number,reduced:boolean}){
  const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${index%2?'girl':'boy'}.glb?v=color-08`);
  const root=useRef<THREE.Group>(null),cup=useRef<THREE.Group>(null),bag=useRef<THREE.Group>(null);
  const actor=useMemo<Neighbor>(()=>({x:0,z:0,walking:false,readyAt:world.time+8+index*.4,greeting:null}),[world,index]);
  useEffect(()=>{const id=`${homeId}-${resident}`;world.actors.set(id,actor);return()=>{world.actors.delete(id)}},[world,actor,homeId,resident]);
+ const visitor=`${homeId}-${resident}`;
+ const park=useRef<ReturnType<typeof parkActivity>|null>(null),pose=useRef({x:0,y:0,z:0,seated:false,walking:false,facing:0});
+ useEffect(()=>{park.current=null;releaseVisit(activity,visitor);return()=>{releaseVisit(activity,visitor)}},[activity,visitor,outings,reduced]);
  const clock=useRef({trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''});
  useEffect(()=>{clock.current={trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''};if(cup.current)cup.current.visible=false;if(bag.current)bag.current.visible=false},[outings,index]);
  const model=useMemo(()=>{const copy=scene.clone(true);copy.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.raycast=noRaycast}});return {copy,limbs:['LeftLeg','RightLeg','LeftArm','RightArm'].map(n=>copy.getObjectByName(n))}},[scene]);
  useFrame((_,delta)=>{
   const g=root.current;if(!g||paused||document.hidden)return;
   const c=clock.current,dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
+  if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
+  if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
   if(actor.greeting&&!reduced){
    g.rotation.y=actor.greeting.angle;
    model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.x=j===3&&c.carrying?-.65:0;limb.rotation.z=j===2?-2.1+Math.sin((world.time-actor.greeting!.started)*12)*.25:0}});
@@ -37,6 +43,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,home
   c.time+=dt;c.phase+=dt;
   let segment=outing.segments[c.segment];
   if(c.time>=segment.end){
+   releaseVisit(activity,visitor);park.current=null;
    if(segment.type==='visit'){
     const stop=segment.stop as Stop;
     if((stop.kind==='cafe'||stop.kind==='bakery')&&onVisit(stop.id,homeId,resident))c.carrying=stop.kind;
@@ -44,6 +51,22 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,home
    if(c.segment===outing.segments.length-1){c.trip++;c.segment=0;c.time=0;c.carrying='';}
    else c.segment++;
    segment=outings[c.trip%outings.length].segments[c.segment];
+  }
+  if(segment.type==='visit'){
+   const stop=segment.stop;
+   if(stop.kind==='park'&&!reduced){
+    const visit=beginVisit(activity,visitor,stop.id,stop.kind,index);
+    actor.walking=false;
+    if(!visit){c.time=segment.end;return;}
+    if(!park.current)park.current=parkActivity(stop.point,parkRotations[stop.id]??0,visit.spot);
+    visit.elapsed+=dt;c.time=segment.start;
+    const p=parkPose(park.current,visit.elapsed,pose.current);
+    g.position.set(p.x,p.y,p.z);g.rotation.y=p.facing;actor.x=p.x;actor.z=p.z;
+    model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=p.seated?(j<2?-1.1:j===3&&c.carrying?-.65:0):j===3&&c.carrying?-.65:p.walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
+    if(visit.elapsed>=park.current.duration){releaseVisit(activity,visitor);park.current=null;c.time=segment.end;}
+    return;
+   }
+   if(stop.kind==='cafe'||stop.kind==='bakery')beginVisit(activity,visitor,stop.id,stop.kind,index);
   }
   const walking=segment.type==='walk';
   if(segment.type==='walk'){
@@ -70,7 +93,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,home
   <group ref={bag} visible={false} position={[.25,.55,.23]}><mesh geometry={bagGeometry} material={bagMaterial} raycast={noRaycast}/></group>
  </group>;
 }
-export default function Residents({buildings,network,reduced,onVisit,paused}:{network:ReturnType<typeof walkingNetwork>,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,buildings:BuildingInstance[],reduced:boolean}){
+export default function Residents({buildings,network,activity,reduced,onVisit,paused}:{activity:ReturnType<typeof activityWorld>,network:ReturnType<typeof walkingNetwork>,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,buildings:BuildingInstance[],reduced:boolean}){
  const world=useMemo(()=>greetingWorld(),[network]);
  useFrame((_,delta)=>stepGreetings(world,delta,{paused,reduced,hidden:document.hidden}),-1);
  const residents=useMemo(()=>{
@@ -86,5 +109,5 @@ export default function Residents({buildings,network,reduced,onVisit,paused}:{ne
    return {...r,homeFacing:entrance.facing,outings:plans.map(stops=>makeOuting(home,stops,network.obstacles,network.route))};
   });
  },[buildings,network]);
- return <group>{residents.map(r=><Person {...r} world={world} key={r.id} onVisit={onVisit} paused={paused} reduced={reduced}/>)}</group>;
+ return <group>{residents.map(r=><Person {...r} world={world} activity={activity} parkRotations={network.rotations} key={r.id} onVisit={onVisit} paused={paused} reduced={reduced}/>)}</group>;
 }

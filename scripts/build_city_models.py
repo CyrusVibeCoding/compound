@@ -65,7 +65,7 @@ def export(name):
  # Keep editable source objects; batch runtime meshes by parent/material to reduce draw calls.
  batches={}
  for o in list(bpy.context.scene.objects):
-  if o.type=='MESH':batches.setdefault((o.parent.name if o.parent else '',o.data.materials[0].name),[]).append(o)
+  if o.type=='MESH' and o.name!='ShopWindow':batches.setdefault((o.parent.name if o.parent else '',o.data.materials[0].name),[]).append(o)
  for (parent,mat),objects in batches.items():
   if len(objects)<2:continue
   bpy.ops.object.select_all(action='DESELECT')
@@ -110,10 +110,11 @@ asset='cafe'
 base()
 box('Cafe walls',(0,.46,.72),(1.8,1.05,1.2),cream)
 box('Flat roof',(0,.46,1.36),(1.98,1.2,.12),teal)
-box('Shop window',(-.48,-.085,.83),(.65,.06,.62),windowBlue)
-box('Cafe door',(.43,-.09,.70),(.40,.06,.98),teal)
-box('Door glass',(.43,-.13,.86),(.28,.03,.5),windowBlue)
-box('Handle',(.56,-.16,.62),(.025,.03,.15),wood)
+box('ShopWindow',(-.48,-.085,.83),(.65,.06,.62),windowBlue)
+box('Doorway',(.43,-.065,.70),(.40,.02,.98),dark)
+hinge=bpy.data.objects.new('ShopDoor',None);bpy.context.collection.objects.link(hinge);hinge.location=(.23,-.09,.70)
+for name,loc,size,mat in [('Cafe door',(.43,-.09,.70),(.40,.06,.98),teal),('Door glass',(.43,-.13,.86),(.28,.03,.5),windowBlue),('Handle',(.56,-.16,.62),(.025,.03,.15),wood)]:
+ o=box(name,loc,size,mat);o.parent=hinge;o.location=Vector(loc)-hinge.location
 for i in range(8):
  x=-.875+i*.25
  box('Awning stripe',(x,-.30,1.19),(.25,.62,.065),clay if i%2==0 else bright,.008)
@@ -138,10 +139,11 @@ asset='bakery'
 base()
 box('Cafe walls',(0,.46,.72),(1.8,1.05,1.2),cream)
 box('Flat roof',(0,.46,1.36),(1.98,1.2,.12),clay)
-box('Shop window',(-.48,-.085,.83),(.65,.06,.62),windowBlue)
-box('Cafe door',(.43,-.09,.70),(.40,.06,.98),teal)
-box('Door glass',(.43,-.13,.86),(.28,.03,.5),windowBlue)
-box('Handle',(.56,-.16,.62),(.025,.03,.15),wood)
+box('ShopWindow',(-.48,-.085,.83),(.65,.06,.62),windowBlue)
+box('Doorway',(.43,-.065,.70),(.40,.02,.98),dark)
+hinge=bpy.data.objects.new('ShopDoor',None);bpy.context.collection.objects.link(hinge);hinge.location=(.23,-.09,.70)
+for name,loc,size,mat in [('Cafe door',(.43,-.09,.70),(.40,.06,.98),teal),('Door glass',(.43,-.13,.86),(.28,.03,.5),windowBlue),('Handle',(.56,-.16,.62),(.025,.03,.15),wood)]:
+ o=box(name,loc,size,mat);o.parent=hinge;o.location=Vector(loc)-hinge.location
 for i in range(8):
  x=-.875+i*.25
  box('Awning stripe',(x,-.30,1.19),(.25,.62,.065),wood if i%2==0 else cream,.008)
