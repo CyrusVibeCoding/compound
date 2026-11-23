@@ -1,3 +1,4 @@
+import {turnTowards} from './turning.mjs';
 import {useMemo,useRef,useEffect} from 'react';
 import {useFrame} from '@react-three/fiber';
 import {useGLTF} from '@react-three/drei';
@@ -28,6 +29,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
  const identity=useMemo(()=>residentProfile(homeId,resident),[homeId,resident]);
  const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${identity.avatar}.glb?v=color-08`);
  const root=useRef<THREE.Group>(null),cup=useRef<THREE.Group>(null),bag=useRef<THREE.Group>(null);
+ const facingReady=useRef(false);
  const entryPose=useRef({x:0,y:0,z:0,inside:false,walking:false,doorOpen:false,facing:0});
  const actor=useMemo<Neighbor>(()=>({x:0,z:0,walking:false,readyAt:world.time+8+index*.4,greeting:null}),[world,index]);
  useEffect(()=>{const id=`${homeId}-${resident}`;world.actors.set(id,actor);return()=>{world.actors.delete(id)}},[world,actor,homeId,resident]);
@@ -49,6 +51,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
  const model=useMemo(()=>{const copy=scene.clone(true);copy.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.raycast=noRaycast}});return {copy,limbs:['LeftLeg','RightLeg','LeftArm','RightArm'].map(n=>copy.getObjectByName(n))}},[scene]);
  useFrame((_,delta)=>{
   const g=root.current;if(!g||paused||document.hidden)return;
+  const face=(target:number)=>{g.rotation.y=reduced||!facingReady.current||!g.visible?target:turnTowards(g.rotation.y,target,delta);facingReady.current=true;};
   const at=Date.now(),gap=Math.max(0,at-lastAt.current)/1000;
   const c=clock.current;
   if(gap>.5){
@@ -67,13 +70,13 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   if(handle.tapRemaining>0&&g.visible){
    handle.tapRemaining=Math.max(0,handle.tapRemaining-dt);
    if(!reduced&&!park.current){
-    actor.walking=false;g.rotation.y=handle.tapAngle;
+    actor.walking=false;face(handle.tapAngle);
     model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.x=j===3&&c.carrying?-.65:0;limb.rotation.z=j===2?-2+Math.sin(c.phase*12+handle.tapRemaining*12)*.25:0}});
     return;
    }
   }
   if(actor.greeting&&!reduced&&!park.current){
-   g.rotation.y=actor.greeting.angle;
+   face(actor.greeting.angle);
    model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.x=j===3&&c.carrying?-.65:0;limb.rotation.z=j===2?-2.1+Math.sin((world.time-actor.greeting!.started)*12)*.25:0}});
    return;
   }
@@ -102,9 +105,9 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
     handle.status=p.walking?`Strolling through ${stop.kind==='plaza'?'the plaza':'the park'}`:p.seated?'Resting on a bench':stop.kind==='plaza'?'Relaxing by the planter':'Enjoying the fountain';
     actor.walking=stop.kind==='plaza'&&!p.walking;actor.socialPlace=stop.kind==='plaza'?stop.id:undefined;
     if(actor.greeting&&stop.kind==='plaza')handle.status='Greeting a neighbor in the plaza';
-    g.position.set(p.x,p.y,p.z);g.rotation.y=p.facing;actor.x=p.x;actor.z=p.z;
+    g.position.set(p.x,p.y,p.z);face(p.facing);actor.x=p.x;actor.z=p.z;
     model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=p.seated?(j<2?-1.1:j===3&&c.carrying?-.65:0):j===3&&c.carrying?-.65:p.walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
-    if(!reduced&&(handle.tapRemaining>0||actor.greeting)){const arm=model.limbs[2];if(arm)arm.rotation.z=-2+Math.sin((handle.tapRemaining||world.time)*12)*.25;if(!p.seated&&actor.greeting)g.rotation.y=actor.greeting.angle;}
+    if(!reduced&&(handle.tapRemaining>0||actor.greeting)){const arm=model.limbs[2];if(arm)arm.rotation.z=-2+Math.sin((handle.tapRemaining||world.time)*12)*.25;if(!p.seated&&actor.greeting)face(actor.greeting.angle);}
     if(visit.elapsed>=park.current.duration){releaseVisit(activity,visitor);park.current=null;c.time=segment.end;}
     return;
    }
@@ -120,11 +123,11 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
    while(i<segment.lengths.length-1&&segment.lengths[i]<distance)i++;
    const a=segment.points[i-1],b=segment.points[i],length=segment.lengths[i]-segment.lengths[i-1],t=length?THREE.MathUtils.clamp((distance-segment.lengths[i-1])/length,0,1):0;
    g.position.set(THREE.MathUtils.lerp(a[0],b[0],t),.025,THREE.MathUtils.lerp(a[2],b[2],t));
-   g.rotation.y=Math.atan2(b[0]-a[0],b[2]-a[2]);
+   face(Math.atan2(b[0]-a[0],b[2]-a[2]));
   }else{
    g.position.set(segment.point[0],.025,segment.point[2]);
-   if(segment.type==='visit')g.rotation.y=segment.stop.facing;
-   if(segment.type==='home'){c.carrying='';g.rotation.y=homeFacing;}
+   if(segment.type==='visit')face(segment.stop.facing);
+   if(segment.type==='home'){c.carrying='';face(homeFacing);}
   }
   const isShop=segment.type==='visit'&&(segment.stop.kind==='cafe'||segment.stop.kind==='bakery');
   if(segment.type==='home'||isShop){
@@ -134,11 +137,11 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
    setDoorOpen(activity,id,visitor,!reduced&&p.doorOpen);
    g.visible=!p.inside;actor.walking=false;actor.socialPlace=undefined;actor.greeting=null;
    handle.status=p.inside?(isShop?`Inside ${FAVORITES[kind as keyof typeof FAVORITES]}`:'At home'):p.doorOpen?(c.time-segment.start<3?'Going inside':'Stepping outside'):'At home';
-   if(!reduced){g.position.set(p.x,p.y,p.z);g.rotation.y=p.facing;}
+   if(!reduced){g.position.set(p.x,p.y,p.z);face(p.facing);}
    model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=!reduced&&p.walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
    return;
   }
-  if(reduced){const first=outings[0].segments[0];g.position.set(...(first.type==='walk'?first.points[0]:first.point));g.rotation.y=0;}
+  if(reduced){const first=outings[0].segments[0];g.position.set(...(first.type==='walk'?first.points[0]:first.point));face(0);}
   actor.x=g.position.x;actor.z=g.position.z;
   actor.walking=!reduced&&walking&&c.time-segment.start>1&&segment.end-c.time>1;
   if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';

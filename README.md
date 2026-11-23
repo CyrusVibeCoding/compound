@@ -201,3 +201,7 @@ Resident visibility is now derived from the current routine phase on every frame
 Build cards have room for focus outlines. Task filters keep their labels on one line and scroll horizontally, selected filters expose their state, completion/add controls have larger touch targets, and small task form controls use 16px text on coarse pointers to avoid iPhone input zoom. Hover feedback for task checks and icon buttons is mouse-only. Sheets contain their scroll and keyboard focus wraps correctly from the dialog itself.
 
 Validation: 73 automated tests and production build. A 390×844 mobile Chromium check verified three visible moving residents before and after switching to Today and back, Build category filtering, task creation, and no page errors or horizontal overflow. Physical iPhone Safari remains unverified.
+
+## Smooth resident turns (0.20.1)
+
+Residents ease toward new headings along the shortest angle when walking, entering doors, or greeting. Hidden/initial poses and Calmer effects snap to their correct heading. Paths, routine checkpoints, elapsed catch-up, and payments are unchanged. Validation: 75 automated tests and production build; physical iPhone Safari feel remains unverified.
