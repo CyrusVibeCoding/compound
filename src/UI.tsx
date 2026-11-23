@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {X,Plus,Play,Check,Trash2,Circle,CheckCircle2,Sun,Box} from 'lucide-react';
-import {dayKey} from './game.mjs';import {amount} from './production.mjs';
+import {dayKey} from './game.mjs';import {amount} from './city.mjs';
 export type Task={id:string,title:string,project:string,done:boolean,notes:string,today:string,steps:{id:string,title:string,done:boolean}[]};
 export function Modal({children,close,label='Details'}:{children:React.ReactNode,close:()=>void,label?:string}){
  const ref=useRef<HTMLDivElement>(null),closeRef=useRef(close);closeRef.current=close;
@@ -16,13 +16,13 @@ export function TaskDetails({task,projects,dispatch,onStart,onDone,close}:{task:
   <div className="task-options"><select aria-label="Project" value={task.project} onChange={e=>dispatch({type:'edit',id:task.id,project:e.target.value})}>{projects.map(p=><option key={p}>{p}</option>)}</select><button className={task.today===dayKey()?'selected':''} aria-pressed={task.today===dayKey()} onClick={()=>dispatch({type:'edit',id:task.id,today:task.today!==dayKey()})}><Sun size={15}/> Today</button></div>
   <textarea className="task-notes" aria-label="Task notes" placeholder="Notes, links, or what done looks like…" value={task.notes} maxLength={10000} onChange={e=>dispatch({type:'edit',id:task.id,notes:e.target.value})}/>
   <div className="subtasks">{task.steps.map(s=><button key={s.id} onClick={()=>dispatch({type:'toggleStep',id:task.id,stepId:s.id})}>{s.done?<CheckCircle2 size={18}/>:<Circle size={18}/>}<span className={s.done?'struck':''}>{s.title}</span></button>)}<form onSubmit={e=>{e.preventDefault();if(!step.trim())return;dispatch({type:'step',id:task.id,stepId:crypto.randomUUID(),title:step.trim()});setStep('')}}><input aria-label="Add a smaller step" placeholder="Add a smaller step…" value={step} onChange={e=>setStep(e.target.value)} maxLength={240}/><button className="icon-button" aria-label="Add subtask" disabled={!step.trim()}><Plus size={18}/></button></form></div>
-  <span className="field-label">FOCUS TIME · 2 MATTER + 1 CHARGE / MIN</span><div className="durations">{[5,10,25].map(d=><button key={d} className={duration===d?'active':''} onClick={()=>setDuration(d)}>{d}<span>minutes</span></button>)}</div>
-  <button className="primary wide" onClick={()=>onStart(duration)}><Play size={17} fill="currentColor"/> Start focus <span>+{duration*2} Matter</span></button>
-  <button className="secondary wide" onClick={onDone}><Check size={18}/> Finished · +20 Matter +5 Charge</button>
+  <span className="field-label">STUDY · $2 CASH / MIN</span><div className="durations">{[5,10,25].map(d=><button key={d} className={duration===d?'active':''} onClick={()=>setDuration(d)}>{d}<span>minutes</span></button>)}</div>
+  <button className="primary wide" onClick={()=>onStart(duration)}><Play size={17} fill="currentColor"/> Start study <span>+${duration*2}</span></button>
+  <button className="secondary wide" onClick={onDone}><Check size={18}/> Finished · +$20</button>
   <button className="delete-task" onClick={()=>{if(window.confirm('Delete this task?')){dispatch({type:'delete',id:task.id});close()}}}><Trash2 size={15}/> Delete task</button>
  </Modal>;
 }
-export function AnimatedMatter({value,reduced=false}:{value:number,reduced?:boolean}){
+export function AnimatedCash({value,reduced=false}:{value:number,reduced?:boolean}){
  const [display,setDisplay]=useState(value),previous=useRef(value);
  useEffect(()=>{const start=previous.current;previous.current=value;if(reduced||window.matchMedia('(prefers-reduced-motion: reduce)').matches){setDisplay(value);return;}let id=0;const at=performance.now();function frame(now:number){const t=Math.min(1,(now-at)/350);setDisplay(start+(value-start)*(1-(1-t)**3));if(t<1)id=requestAnimationFrame(frame)}id=requestAnimationFrame(frame);return()=>cancelAnimationFrame(id)},[value,reduced]);
  return <strong>{amount(display)}</strong>;
@@ -31,7 +31,7 @@ export function Focus({title,left,duration,onEnd,onFinish}:{title:string,left:nu
  const [note,setNote]=useState(''),[nextStep,setNextStep]=useState('');const ready=left===0;
  return <div className="focus-screen"><span className="eyebrow">{ready?'TIME WELL SPENT':'ONE THING AT A TIME'}</span><div className={`focus-sculpture ${ready?'ready':''}`}><div/><div/><Box size={40} strokeWidth={1}/></div><h2>{ready?'What moved forward?':'Make a little room.'}</h2><p>{title}</p>
   <div className="timer">{String(Math.floor(left/60000)).padStart(2,'0')}<span>:</span>{String(Math.floor(left/1000)%60).padStart(2,'0')}</div>
-  {ready?<><p className="focus-hint">Effort earned {duration*2} Matter + up to {duration} Charge.<br/>Finish task: +20 Matter. Charge fills available tank space.</p><textarea className="progress-note" aria-label="Progress note" placeholder="Optional: what did you get done?" value={note} maxLength={500} onChange={e=>setNote(e.target.value)}/><input className="next-step-input" aria-label="Next small step" placeholder="Next small step (optional)" value={nextStep} maxLength={240} onChange={e=>setNextStep(e.target.value)}/><button className="primary wide" onClick={()=>onFinish('finished',note,nextStep)}><Check size={17}/> Finished task</button><button className="secondary wide" onClick={()=>onFinish('progress',note,nextStep)}>Made progress</button><button className="text-button" onClick={()=>{onFinish('continue',note,nextStep);setNote('');setNextStep('')}}>Keep going · {duration} more minutes</button></>:<><p className="focus-hint">Lock your phone if you like. Time keeps counting.</p><button className="secondary wide" onClick={onEnd}>End session</button></>}
+  {ready?<><p className="focus-hint">Study earned ${duration*2}.<br/>Finishing the task also earns $20.</p><textarea className="progress-note" aria-label="Progress note" placeholder="Optional: what did you get done?" value={note} maxLength={500} onChange={e=>setNote(e.target.value)}/><input className="next-step-input" aria-label="Next small step" placeholder="Next small step (optional)" value={nextStep} maxLength={240} onChange={e=>setNextStep(e.target.value)}/><button className="primary wide" onClick={()=>onFinish('finished',note,nextStep)}><Check size={17}/> Finished task</button><button className="secondary wide" onClick={()=>onFinish('progress',note,nextStep)}>Made progress</button><button className="text-button" onClick={()=>{onFinish('continue',note,nextStep);setNote('');setNextStep('')}}>Keep going · {duration} more minutes</button></>:<><p className="focus-hint">Lock your phone if you like. Time keeps counting.</p><button className="secondary wide" onClick={onEnd}>End session</button></>}
  </div>;
 }
 export type Flight={id:number,x:number,y:number,dx:number,dy:number,kind?:'collect'|'task'|'session'}|null;

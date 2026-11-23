@@ -1,0 +1,1 @@
+export const FINISHES=[{id:'porcelain',name:'Porcelain',description:'Soft white ceramic.',milestone:null},{id:'graphite',name:'Graphite',description:'Dark satin machinery. White world.',milestone:'three-tasks'},{id:'silver',name:'Brushed silver',description:'Polished gray metal.',milestone:'focus-25'}];
