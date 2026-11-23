@@ -74,7 +74,11 @@ def export(name):
  bpy.ops.object.select_all(action='SELECT');bpy.ops.export_scene.gltf(filepath=f'{ROOT}/public/models/{name}.glb',export_format='GLB',use_selection=True);bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 # Basic cottage, with a front stoop and gabled terracotta roof.
 base();box('House',(0,.1,.75),(1.5,1.35,1.2));roof('Gabled roof',0,.1,1.35,1.8,1.65,.65)
-box('Door trim',(0,-.595,.58),(.46,.08,.85),bright);box('Front door',(0,-.65,.57),(.34,.06,.74),dark);ball('Door knob',(.105,-.69,.56),(.025,.025,.025),gray)
+box('Door trim',(0,-.595,.58),(.46,.08,.85),bright)
+box('Doorway',(0,-.645,.57),(.34,.02,.74),dark)
+hinge=bpy.data.objects.new('BuildingDoor',None);bpy.context.collection.objects.link(hinge);hinge.location=(-.17,-.65,.57)
+for o in [box('Front door',(0,-.65,.57),(.34,.06,.74),teal),ball('Door knob',(.105,-.69,.56),(.025,.025,.025),gray)]:
+ loc=o.location.copy();o.parent=hinge;o.location=loc-hinge.location
 window(-.48,-.60,.88,.27,.39);window(.48,-.60,.88,.27,.39)
 box('Step',(0,-.86,.18),(.65,.42,.14),gray);box('Door canopy',(0,-.76,1.10),(.65,.45,.08),silver)
 box('Chimney',(.5,.4,1.85),(.22,.24,.6),gray);box('Chimney cap',(.5,.4,2.15),(.30,.30,.08),bright)
@@ -87,7 +91,10 @@ box('Side wing',(.68,.25,.62),(.65,1.05,1.0));roof('Wing roof',.68,.25,1.12,.85,
 for x in [-.56,.13]:
  window(x,-.62,1.5,.32,.42)
 window(.68,-.30,.75,.28,.34);window(-.55,-.62,.65,.33,.45)
-box('Door',(.12,-.63,.60),(.32,.08,.82),dark);ball('Knob',(.22,-.69,.60),(.023,.023,.023),gray)
+box('Doorway',(.12,-.59,.60),(.32,.02,.82),dark)
+hinge=bpy.data.objects.new('BuildingDoor',None);bpy.context.collection.objects.link(hinge);hinge.location=(-.04,-.63,.60)
+for o in [box('Door',(.12,-.63,.60),(.32,.08,.82),teal),ball('Knob',(.22,-.69,.60),(.023,.023,.023),gray)]:
+ loc=o.location.copy();o.parent=hinge;o.location=loc-hinge.location
 box('Porch',(.12,-.84,.20),(.8,.48,.16),gray);box('Balcony',(.12,-.78,1.16),(.8,.38,.08),bright)
 for x in [-.24,.48]:cyl('Porch column',(x,-.94,.70),.035,.95,bright)
 for x in [-.22,0,.22,.44]:box('Balcony rail',(x,-.98,1.29),(.025,.025,.22),silver,.004)

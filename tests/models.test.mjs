@@ -13,3 +13,7 @@ test('shop exports have separate door hinges and windows for lightweight visitor
   assert.ok(door?.children?.length>=2);assert.ok(Number.isInteger(window?.mesh));
  }
 });
+
+test('both home models include a separately animated doorway',()=>{
+ for(const name of ['house','big-house']){const bytes=readFileSync(new URL(`../public/models/${name}.glb`,import.meta.url));const gltf=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)));assert.ok(gltf.nodes.some(n=>n.name==='BuildingDoor'&&n.children?.length));}
+});

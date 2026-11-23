@@ -9,6 +9,7 @@ import {greetingWorld,stepGreetings,type Neighbor} from './greetings.mjs';
 import type {walkingNetwork} from './walking.mjs';
 import {beginVisit,releaseVisit,parkActivity,parkPose,activityWorld} from './placeActivity.mjs';
 import {savedRoutine,rememberRoutine,advanceRoutine,routineLayout} from './routines.mjs';
+import {buildingVisitPose,setDoorOpen} from './buildingVisits.mjs';
 import {placeSpots} from './placeActivity.mjs';
 import {makeOuting,outingStops} from './outings.mjs';
 import type {BuildingInstance,Point} from './World';
@@ -23,10 +24,11 @@ const bagGeometry=new THREE.BoxGeometry(.25,.34,.16);
 const cupMaterial=new THREE.MeshStandardMaterial({color:'#f5ead5'});
 const lidMaterial=new THREE.MeshStandardMaterial({color:'#496a61'});
 const bagMaterial=new THREE.MeshStandardMaterial({color:'#bc8753'});
-function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,people,activity,parkRotations,homeFacing}:{people:People,activity:ReturnType<typeof activityWorld>,parkRotations:Record<string,number>,world:ReturnType<typeof greetingWorld>,homeFacing:number,outings:Outing[],homeId:string,resident:number,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,index:number,reduced:boolean}){
+function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,people,activity,parkRotations,placements,homeKind,homeFacing}:{placements:Record<string,Point>,homeKind:string,people:People,activity:ReturnType<typeof activityWorld>,parkRotations:Record<string,number>,world:ReturnType<typeof greetingWorld>,homeFacing:number,outings:Outing[],homeId:string,resident:number,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,index:number,reduced:boolean}){
  const identity=useMemo(()=>residentProfile(homeId,resident),[homeId,resident]);
  const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${identity.avatar}.glb?v=color-08`);
  const root=useRef<THREE.Group>(null),cup=useRef<THREE.Group>(null),bag=useRef<THREE.Group>(null);
+ const entryPose=useRef({x:0,y:0,z:0,inside:false,walking:false,doorOpen:false,facing:0});
  const actor=useMemo<Neighbor>(()=>({x:0,z:0,walking:false,readyAt:world.time+8+index*.4,greeting:null}),[world,index]);
  useEffect(()=>{const id=`${homeId}-${resident}`;world.actors.set(id,actor);return()=>{world.actors.delete(id)}},[world,actor,homeId,resident]);
  const visitor=`${homeId}-${resident}`;
@@ -40,7 +42,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
  const clock=useRef({trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''});
  useEffect(()=>{
   const saved=savedRoutine(visitor,layout),at=Date.now();
-  const next=saved?advanceRoutine(outings,saved,Math.max(0,at-saved.at)/1000,parkDuration):{trip:0,segment:0,time:0,carrying:'',parkElapsed:0};
+  const next=saved?advanceRoutine(outings,saved,Math.max(0,at-saved.at)/1000,parkDuration):{trip:0,segment:outings[0].segments.length-1,time:outings[0].segments.at(-1)!.start+3+(index%3)*.8,carrying:'',parkElapsed:0};
   clock.current={...next,phase:index*2};pendingPark.current=next.parkElapsed;lastAt.current=at;
  },[outings,index,layout]);
 
@@ -59,7 +61,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   const dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
   if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
   if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
-  if(handle.tapRemaining>0){
+  if(handle.tapRemaining>0&&g.visible){
    handle.tapRemaining=Math.max(0,handle.tapRemaining-dt);
    if(!reduced&&!park.current){
     actor.walking=false;g.rotation.y=handle.tapAngle;
@@ -76,7 +78,8 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   let segment=outing.segments[c.segment];
   if(c.time>=segment.end){
    releaseVisit(activity,visitor);park.current=null;
-   if(segment.type==='visit'){
+   g.visible=true;
+  if(segment.type==='visit'){
     const stop=segment.stop as Stop;
     if((stop.kind==='cafe'||stop.kind==='bakery')&&onVisit(stop.id,homeId,resident))c.carrying=stop.kind;
    }
@@ -120,6 +123,18 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
    if(segment.type==='visit')g.rotation.y=segment.stop.facing;
    if(segment.type==='home'){c.carrying='';g.rotation.y=homeFacing;}
   }
+  const isShop=segment.type==='visit'&&(segment.stop.kind==='cafe'||segment.stop.kind==='bakery');
+  if(segment.type==='home'||isShop){
+   const id=segment.type==='visit'?segment.stop.id:homeId,kind=segment.type==='visit'?segment.stop.kind:homeKind;
+   if(segment.type==='home')beginVisit(activity,visitor,id,'home',index);
+   const p=buildingVisitPose(kind,placements[id],parkRotations[id]??0,c.time-segment.start,segment.end-segment.start,entryPose.current,'point' in segment?segment.point:null);
+   setDoorOpen(activity,id,visitor,!reduced&&p.doorOpen);
+   g.visible=!p.inside;actor.walking=false;actor.socialPlace=undefined;actor.greeting=null;
+   handle.status=p.inside?(isShop?`Inside ${FAVORITES[kind as keyof typeof FAVORITES]}`:'At home'):p.doorOpen?(c.time-segment.start<3?'Going inside':'Stepping outside'):'At home';
+   if(!reduced){g.position.set(p.x,p.y,p.z);g.rotation.y=p.facing;}
+   model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=!reduced&&p.walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
+   return;
+  }
   if(reduced){const first=outings[0].segments[0];g.position.set(...(first.type==='walk'?first.points[0]:first.point));g.rotation.y=0;}
   actor.x=g.position.x;actor.z=g.position.z;
   actor.walking=!reduced&&walking&&c.time-segment.start>1&&segment.end-c.time>1;
@@ -127,7 +142,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
   model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=reduced?0:j===3&&c.carrying?-.65:walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
  });
- return <group name={`resident-${homeId}-${resident}`} ref={root} scale={.32} raycast={noRaycast}>
+ return <group name={`resident-${homeId}-${resident}`} ref={root} visible={false} scale={.32} raycast={noRaycast}>
   <primitive object={model.copy}/>
   <group ref={cup} visible={false} position={[.25,.74,.23]}><mesh geometry={cupGeometry} material={cupMaterial} raycast={noRaycast}/><mesh position={[0,.16,0]} geometry={lidGeometry} material={lidMaterial} raycast={noRaycast}/></group>
   <group ref={bag} visible={false} position={[.25,.55,.23]}><mesh geometry={bagGeometry} material={bagMaterial} raycast={noRaycast}/></group>
@@ -146,8 +161,8 @@ export default function Residents({buildings,network,people,activity,reduced,onV
     const other=network.entrances.find(e=>e.id!==r.homeId);
     plans[0]=[{id:'stroll',kind:'stroll',point:other?other.point as Point:[home[0]+2,0,home[2]+1],facing:0}];
    }
-   return {...r,homeFacing:entrance.facing,outings:plans.map(stops=>makeOuting(home,stops,network.obstacles,network.route))};
+   return {...r,homeKind:entrance.kind,homeFacing:entrance.facing,outings:plans.map(stops=>makeOuting(home,stops,network.obstacles,network.route))};
   });
  },[buildings,network]);
- return <group>{residents.map(r=><Person {...r} world={world} people={people} activity={activity} parkRotations={network.rotations} key={r.id} onVisit={onVisit} paused={paused} reduced={reduced}/>)}</group>;
+ return <group>{residents.map(r=><Person {...r} world={world} people={people} activity={activity} parkRotations={network.rotations} placements={network.placements} key={r.id} onVisit={onVisit} paused={paused} reduced={reduced}/>)}</group>;
 }

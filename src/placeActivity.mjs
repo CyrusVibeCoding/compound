@@ -1,5 +1,5 @@
 // Transient activity only: no needs, extra payments, saved timers, or background simulation.
-export function activityWorld(){return {visits:new Map(),spots:new Map(),shops:new Map()};}
+export function activityWorld(){return {doors:new Map(),visits:new Map(),spots:new Map(),shops:new Map()};}
 export const PARK_SPOTS=[
  {id:'front-bench',x:0,z:.49,y:.125,facing:0,seated:true,via:[[.5,.36]]},
  {id:'back-bench',x:0,z:-.49,y:.125,facing:0,seated:true,via:[[.5,-.49]]},
@@ -9,6 +9,7 @@ export const PLAZA_SPOTS=PARK_SPOTS.map(s=>s.id==='fountain'?{...s,id:'planter'}
 export const placeSpots=kind=>kind==='plaza'?PLAZA_SPOTS:PARK_SPOTS;
 export function releaseVisit(world,resident){
  const visit=world.visits.get(resident);if(!visit)return;
+ const door=world.doors.get(visit.buildingId);if(door){door.delete(resident);if(!door.size)world.doors.delete(visit.buildingId);}
  if(visit.spot)world.spots.delete(`${visit.buildingId}:${visit.spot.id}`);
  if(visit.kind==='cafe'||visit.kind==='bakery'){
   const count=(world.shops.get(visit.buildingId)??1)-1;

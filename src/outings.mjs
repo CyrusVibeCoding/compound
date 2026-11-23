@@ -20,13 +20,13 @@ export function makeOuting(home, stops, obstacles,routeFor=(start,end)=>streetPa
   // A failed search returns only the start. Never sell at an unreachable destination.
   if(Math.hypot(end[0]-stop.point[0],end[2]-stop.point[2])>.36)continue;
   walk(route);at=end;
-  const duration=(stop.kind==='park'||stop.kind==='plaza')?7:4;
+  const duration=(stop.kind==='park'||stop.kind==='plaza')?7:14;
   segments.push({type:'visit',stop,point:at,start:time,end:time+duration});time+=duration;
  }
  const back=routeFor(at,home);
  walk(back);
- segments.push({type:'home',point:back.at(-1),start:time,end:time+5});
- return {segments,duration:time+5};
+ segments.push({type:'home',point:back.at(-1),start:time,end:time+12});
+ return {segments,duration:time+12};
 }
 
 // Alternate a small errand chain with a simple visit; every destination gets a turn.

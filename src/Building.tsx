@@ -2,17 +2,17 @@ import {useEffect,useMemo,useRef} from 'react';import {useFrame,type ThreeEvent}
 import type {activityWorld} from './placeActivity.mjs';
 import {spring} from './spring.mjs';import type {Kind,Point,DragHandlers} from './World';
 export default function Building({id,kind,position,rotation=0,reduced,ghost=false,handlers,activity,paused=false,evening=false}:{evening?:boolean,activity?:ReturnType<typeof activityWorld>,paused?:boolean,id:string,kind:Kind,position:Point,rotation?:number,reduced:boolean,ghost?:boolean,handlers?:DragHandlers}){
- const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${kind}.glb?v=places-15`),root=useRef<THREE.Group>(null),velocity=useRef([0,0,0,0,0]),initial=useRef<Point>([position[0],position[1]+(ghost||reduced?0:.3),position[2]]);
+ const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${kind}.glb?v=entry-19`),root=useRef<THREE.Group>(null),velocity=useRef([0,0,0,0,0]),initial=useRef<Point>([position[0],position[1]+(ghost||reduced?0:.3),position[2]]);
  const model=useMemo(()=>{const copy=scene.clone(true),materials:THREE.Material[]=[];copy.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=!ghost;o.receiveShadow=!ghost;if(!ghost&&['Blue windows','Warm lantern'].includes((o.material as THREE.Material).name)){
  const m=(o.material as THREE.MeshStandardMaterial).clone();m.emissive.set('#ffb966');m.emissiveIntensity=0;o.material=m;materials.push(m);
- }if(ghost){const clone=(m:THREE.Material)=>{const n=m.clone();n.transparent=true;n.opacity=.3;n.depthWrite=false;materials.push(n);return n};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material)}}});return {copy,materials,windows:materials.filter(m=>['Blue windows','Warm lantern'].includes(m.name)) as THREE.MeshStandardMaterial[],door:copy.getObjectByName('ShopDoor'),window:copy.getObjectByName('ShopWindow') as THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial>|undefined}},[scene,ghost]);
+ }if(ghost){const clone=(m:THREE.Material)=>{const n=m.clone();n.transparent=true;n.opacity=.3;n.depthWrite=false;materials.push(n);return n};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material)}}});return {copy,materials,windows:materials.filter(m=>['Blue windows','Warm lantern'].includes(m.name)) as THREE.MeshStandardMaterial[],door:copy.getObjectByName('ShopDoor')??copy.getObjectByName('BuildingDoor'),window:copy.getObjectByName('ShopWindow') as THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial>|undefined}},[scene,ghost]);
  useEffect(()=>{model.windows.forEach(m=>m.emissiveIntensity=evening?.3:0)},[model,evening]);
  useEffect(()=>()=>model.materials.forEach(m=>m.dispose()),[model]);
  useEffect(()=>{if((reduced||ghost)&&root.current){root.current.position.set(...position);root.current.rotation.y=rotation*Math.PI/2;root.current.scale.setScalar(.7);velocity.current.fill(0)}},[position,rotation,reduced,ghost]);
  useFrame((_,dt)=>{
   if(!ghost&&!document.hidden){
    const active=!reduced&&!!activity?.shops.get(id),step=Math.min(dt,.1);
-   if(model.door&&!paused)model.door.rotation.y=THREE.MathUtils.damp(model.door.rotation.y,active?-.95:0,9,step);
+   if(model.door&&!paused)model.door.rotation.y=THREE.MathUtils.damp(model.door.rotation.y,!reduced&&activity?.doors.get(id)?.size?-.95:0,9,step);
    if(model.window&&!paused){const m=model.window.material;m.emissiveIntensity=reduced?(evening?.3:0):THREE.MathUtils.damp(m.emissiveIntensity,active ? .65 : evening?.3:0,6,step);}
    if(reduced&&model.door)model.door.rotation.y=0;
   }

@@ -13,7 +13,7 @@ export default function ResidentTouch({people,disabled,onSelect}:{people:People,
   const up=(e:PointerEvent)=>{
    pointers.delete(e.pointerId);if(multi||moved||!isResidentTap(start,{id:e.pointerId,x:e.clientX,y:e.clientY})){start=null;return}start=null;
    const rect=gl.domElement.getBoundingClientRect();let best:string|null=null,distance=26;
-   for(const [id,person] of people){if(!person.root)continue;person.root.getWorldPosition(position);position.y+=.24;worldPosition.copy(position);position.project(camera);if(position.z< -1||position.z>1)continue;
+   for(const [id,person] of people){if(!person.root||!person.root.visible)continue;person.root.getWorldPosition(position);position.y+=.24;worldPosition.copy(position);position.project(camera);if(position.z< -1||position.z>1)continue;
     const d=Math.hypot(rect.left+(position.x+1)*rect.width/2-e.clientX,rect.top+(1-position.y)*rect.height/2-e.clientY);if(d<distance){
      raycaster.setFromCamera(new THREE.Vector2(position.x,position.y),camera);
      const hit=raycaster.intersectObjects(scene.children,true)[0];if(hit&&hit.distance<raycaster.ray.origin.distanceTo(worldPosition)-.15)continue;
