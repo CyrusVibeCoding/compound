@@ -1,51 +1,66 @@
-# Compound · local prototype
+# Compound · powered farm 0.3
 
-A phone-first, monochrome incremental productivity app. Real work earns Matter; Matter builds a miniature world.
+A phone-first, monochrome productivity game. Real work earns Matter and Charge. Charge powers the miniature farm you build.
+
+**Live app:** https://cyrusvibecoding.github.io/compound/?v=powered-farm-03
 
 ![Blender machine preview](models/preview.png)
 
-## Run
+## Run and build
 
-Node 20.19+ (or Node 22.12+):
+Node 20.19+ or Node 22.12+:
 
 ```sh
-npm install
+npm ci
 npm run dev
-```
-
-Use the displayed localhost address on this computer. For iPhone installation and offline use, serve `npm run build` output (`dist/`) over HTTPS. An iPhone cannot reach another computer through `localhost`; use an HTTPS host or a trusted local HTTPS setup. Source is available on GitHub. Live app: https://cyrusvibecoding.github.io/compound/ .
-
-```sh
-npm run build
 npm test
+npm run build
 ```
 
-## Included
+`dist/` is the deployable static site. Relative paths support GitHub Pages under `/compound/`. The `gh-pages` branch contains the deployed build; `main` contains source. Changes on `main` need rebuilding and publishing to `gh-pages`.
 
-- Three custom Blender machines: Core, Press, Assembler, with level-specific attachments.
-- Editable `.blend` sources in `models/`; lightweight GLB runtime exports in `public/models/`.
-- White horizonless 3D farm with a bottom object tray. Touch-drag or tap-to-place, snapped placement, collision checks, pan/pinch zoom, recenter, and tap-to-upgrade sheets. Placement saves locally; old saves retain owned machines.
-- Task capture, three project categories, subtasks, completion history.
-- 5/10/25-minute focus sessions that recover from backgrounding or phone lock using timestamps.
-- 2 Matter per completed focus minute, 20 per completed task, repeat-claim protection.
-- Three levels per machine. Upgrades are visual in this prototype; passive production and prestige are not implemented.
-- Local device storage, validated JSON export/import, production offline cache, reduced-motion support.
+For iPhone, open the live HTTPS app in Safari and choose Share → Add to Home Screen. Home Screen installation and offline caching require HTTPS. Opening `localhost` on an iPhone does not connect it to a different computer.
 
-Tasks are self-reported. A session reward and task completion reward are separate. Ending a session early does not award Matter. No notifications or background alerts. No sound yet.
+## Farm controls
 
-## Model pipeline
+- Drag objects from the tray or directly on the farm. Tap a placed object for upgrades, rotation, or returning it to the tray.
+- Tap a tray object then an open map space as an alternative to dragging.
+- Placement snaps to half-unit spacing and rejects overlaps. A temporary grid and ghost preview appear while editing.
+- Layout undo restores the previous placement/rotation without reversing purchases or production rewards. Machines remain owned after undo.
+- Pan empty space, pinch to zoom, or recenter to frame the saved layout.
 
-Requires Blender 4.3+:
+## Work and production
+
+- A completed 5/10/25-minute session earns **2 Matter +1 Charge per minute**.
+- Completing a task earns **20 Matter +5 Charge**, once. Partial work earns the session reward without marking the task done. Continue claims the completed round and starts a new one.
+- Charge rewards fill available tank capacity. Removing capacity does not delete existing Charge; no new Charge is added until space is available.
+- Core must be placed to produce. Its three levels store 30/60/90 Charge and yield 1/1.25/1.5 Matter per Charge.
+- A placed Press consumes Charge at 1.5/2/2.5 per minute, versus 1 without a Press. More speed produces Matter sooner rather than creating energy.
+- A placed Assembler auto-collects output, adds 30 Charge capacity per level, and adds 40 output capacity per level (base output capacity: 20).
+- Without auto-collection, output waits in storage. Full storage pauses production without consuming Charge. Tap Collect to bank it.
+- Production uses elapsed timestamps, catches up when reopened, and is capped by earned Charge and available output storage. Placing, removing or upgrading settles previous production before changing rates.
+
+Tasks include editable titles, notes, subtasks, custom projects and an explicit Today selection. Focus history includes outcome and optional progress notes. Work is self-reported. No background alarms, sound or notifications are enabled.
+
+## Data and updates
+
+Data stays in this device's `compound-v1` local-storage key. Older saves and exported backups migrate without resetting tasks, Matter, machine ownership, sessions or layout. Export backups in Settings before clearing browser data or switching devices. No sync or server database is configured.
+
+Production builds cache the app and models for offline reopening. Navigation bypasses HTTP cache, updates are checked when returning to the app, and an update notice offers refresh without interrupting a work session. Versioned test links help open a fresh document.
+
+## Blender models
+
+Editable `.blend` files are in `models/`; optimized runtime GLBs are in `public/models/`. Blender 4.3+:
 
 ```sh
 blender -b --python scripts/build_models.py
 blender -b --python scripts/render_models.py
 ```
 
-The first command regenerates all `.blend` and `.glb` files. The second makes `models/showroom.blend` and `models/preview.png`. Keep moving pieces as separate named meshes. `L2_` and `L3_` objects appear at the corresponding upgrade stage. Runtime animation uses the Rotor, InnerRing and Hammer node names.
+The first command regenerates sources and exports. The second creates a showroom scene and PNG preview. Separate moving meshes retain their names. `L2_` and `L3_` objects appear and assemble at matching upgrade levels.
 
-## Verification
+## Verification and limits
 
-TypeScript and production build pass. Eight unit tests cover rewards, elapsed-time recovery, upgrades, backup validation, save migration, placement costs, collisions and returning machines to the tray. Blender files export successfully. Browser and physical iPhone performance, Home Screen install and offline behavior still need testing; no browser automation was available during this build. Target is iPhone 12; 60 fps has not been measured.
+TypeScript, production build and 25 unit tests pass. Tests cover reward replay protection, capped online/offline production, storage, upgrades, capacity changes, placement accounting, layout undo, rotation, timer recovery, session outcomes, migration and backup validation.
 
-Local storage is device/browser-specific and can be removed by iOS or clearing browser data. Export backups regularly. No sync or server database is configured.
+Browser automation is unavailable in this environment. Physical iPhone 12 gestures, Safari Home Screen/offline behavior, visual animations and frame rate remain unverified. The design targets 60 fps; it has not been measured. Sound, prestige and more model families remain future work.
