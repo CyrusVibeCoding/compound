@@ -1,14 +1,14 @@
-# Little City · 0.11
+# Little City · 0.12
 
 A phone-first city built with real effort. Finish tasks, study, earn cash, place homes, and watch residents visit the park. White background, naturally colored models, transparent 3D canvas, and a permanently visible horizonless grid.
 
-**Play:** https://cyrusvibecoding.github.io/compound/?v=little-city-calendar-11
+**Play:** https://cyrusvibecoding.github.io/compound/?v=little-city-shops-12
 
 ![Basic house, big house, park, boy and girl models](models/city/preview.png)
 
 ## The first city
 
-New cities start with **$40**, enough for a basic house. Drag a building from the tray onto open ground, or select it and tap the grid. A valid drop buys it. Tap Edit to move buildings; tap one in Edit mode to rotate or store it. Tap Done to return to safe camera panning. Layout undo keeps purchased ownership; stored homes pause their residents and rent.
+New cities start with **$40**, enough for a basic house. Tap Build, choose a building from the scrolling catalog, and tap open ground. A valid drop buys it. Tap Edit to move buildings; tap one in Edit mode to rotate or store it. Tap Done to return to safe camera panning. Layout undo keeps purchased ownership; stored homes pause their residents and rent.
 
 | Building | First price | Residents | Automatic rent |
 |---|---:|---:|---:|
@@ -75,7 +75,7 @@ Data stays in the browser. Export before changing devices or clearing storage. T
 
 ## Verification
 
-34 tests cover cash rewards/replay protection, study outcomes, purchases, failed drops, ownership/rotation/layout undo, finite rent accounting and backwards clocks, offline equivalence, resident routes, invalid backups, legacy migration/refunds, save isolation/recovery, reset rollback, import, and GLB size/joint/draw-call budgets.
+38 tests cover cash rewards/replay protection, study outcomes, purchases, failed drops, ownership/rotation/layout undo, finite rent accounting and backwards clocks, offline equivalence, resident routes, invalid backups, legacy migration/refunds, save isolation/recovery, reset rollback, import, and GLB size/joint/draw-call budgets.
 
 Mobile Chromium checks at 390 × 844 cover city model loading, resident totals, offline rent, actual tray drag purchases without text selection, task/study cash, the guide, calmer effects, migration, reset cancel/confirm, legacy import, and reload persistence. Physical iPhone 12/Safari gestures, Home Screen behavior, and frame rate remain unmeasured.
 
@@ -108,3 +108,15 @@ Today includes manually chosen tasks and tasks due today, once each. Past-due ta
 Pages show associated tasks and can create them. Task details can link/unlink an existing task and open its page. Archived pages keep their links; tasks remain editable independently. Older saves without deadline/page fields remain supported. Backups preserve both fields.
 
 Validation: 34 unit tests, production build, and mobile Chromium 390 × 844 flow covering schedule/reschedule/clear, month navigation, Today/past-due, page-created tasks, links in both directions, completed agenda, cash-once behavior, persistence, and horizontal layout. Date tests cover leap years, year boundaries, and DST/local dates in Los Angeles, Auckland, and Tokyo. Physical iPhone Safari/keyboard still needs device testing.
+
+## Build shop and resident sales (0.12)
+
+The former building tray is replaced by Build, opening a two-column catalog with All, Homes, Shops, and Outdoors categories. The catalog scrolls vertically and uses thumbnails rendered from the Blender sources. Choose a building and tap the map; payment occurs only on valid placement. Stored buildings return for free and retain their price history.
+
+Bakery: $90 initially, no residents/rent, warm plaster, bread display and loaf sign. Editable source and GLB are included. Regenerate with `CITY_ASSET=bakery blender -b --python scripts/build_city_models.py`; regenerate thumbnails with `blender -b --python scripts/render_shop.py`.
+
+Resident arrival at a café or bakery can produce a $4/$3 sale and a floating popup over that shop. Each shop and each resident has a persisted ten-minute interval between paid purchases. Repeat callbacks, reloads, stored/replaced shops, and backwards clocks cannot bypass the interval. Other visits are browsing. Paid sales require a placed home, valid resident, placed shop, and reachable route. Unreachable destinations are skipped. Parks remain free.
+
+Shop sales happen only while the visible city is running and pause when the Build catalog is open. No offline sales are invented. Automatic offline home rent is unchanged. Calmer effects stop walking but retain visit timing/income. Shop income never counts as cash from real work. Commerce timestamps are included in backups and cleared on reset; older backups remain accepted.
+
+Validation: 38 unit tests, production build, GLB size/draw-call checks, and mobile Chromium 390 × 844 checks for actual touch scrolling, category filters, choosing/placing a bakery, cancel without spending, café/bakery payouts, floating cash, persistence, and no horizontal overflow. Physical iPhone Safari still needs device validation.

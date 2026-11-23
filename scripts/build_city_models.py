@@ -133,6 +133,36 @@ for x in [-.70,.70]:
  cyl('Coffee cup',(x,-.65,.69),.045,.09,bright,12)
 export('cafe')
 
+# Café: warm plaster, striped awning, readable cup sign and a two-table patio.
+asset='bakery'
+base()
+box('Cafe walls',(0,.46,.72),(1.8,1.05,1.2),cream)
+box('Flat roof',(0,.46,1.36),(1.98,1.2,.12),clay)
+box('Shop window',(-.48,-.085,.83),(.65,.06,.62),windowBlue)
+box('Cafe door',(.43,-.09,.70),(.40,.06,.98),teal)
+box('Door glass',(.43,-.13,.86),(.28,.03,.5),windowBlue)
+box('Handle',(.56,-.16,.62),(.025,.03,.15),wood)
+for i in range(8):
+ x=-.875+i*.25
+ box('Awning stripe',(x,-.30,1.19),(.25,.62,.065),wood if i%2==0 else cream,.008)
+ box('Awning valance',(x,-.60,1.10),(.25,.06,.18),wood if i%2==0 else cream,.008)
+box('Sign board',(0,-.10,1.56),(.68,.09,.38),wood)
+# A golden loaf with three pale scoring marks.
+ball('Bread sign',(-.03,-.17,1.56),(.24,.035,.10),wood)
+for x in [-.14,0,.14]:box('Bread scoring',(x,-.21,1.59),(.025,.02,.07),cream,.006)
+box('Bread display',(-.48,-.14,.61),(.65,.15,.06),wood)
+for x in [-.66,-.46,-.26]:ball('Fresh loaf',(x,-.18,.70),(.08,.09,.045),wood)
+for x in [-.70,.70]:
+ cyl('Patio table post',(x,-.65,.38),.035,.45,metal,12)
+ cyl('Patio table top',(x,-.65,.62),.28,.055,wood,20)
+ for y in [-.97,-.31]:
+  box('Chair seat',(x,y,.35),(.27,.23,.055),teal,.02)
+  box('Chair back',(x,y+(-.09 if y<-.6 else .09),.48),(.27,.04,.23),teal,.015)
+  for dx in [-.09,.09]:box('Chair legs',(x+dx,y,.24),(.03,.15,.22),metal,.004)
+ cyl('Coffee cup',(x,-.65,.69),.045,.09,bright,12)
+export('bakery')
+
+
 # Joint pivots are named for lightweight runtime walking (no skeleton/physics).
 def person(girl=False):
  global asset

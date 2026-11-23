@@ -1,3 +1,4 @@
+import {shopPurchase,validCommerce} from './shops.mjs';
 import {validDate} from './dates.mjs';
 import {validNotes} from './notes.mjs';
 import {BUILDINGS,buildingCost,advanceRent} from './city.mjs';
@@ -25,6 +26,7 @@ function claim(state,now,outcome='progress',note='',nextStep=''){
 export function reduce(original,action){
  const now=action.now??Date.now();if(action.type==='reset')return {...INITIAL,rent:{lastTick:now,total:0}};let state=advanceRent(migrate(original,now),now);
  switch(action.type){
+ case 'shopSale':return shopPurchase(state,action);
  case 'noteAdd':{
   if(typeof action.id!=='string'||!action.id||state.notes.some(n=>n.id===action.id))return state;
   return {...state,notes:[...state.notes,{id:action.id,title:'',project:null,blocks:[],createdAt:now,updatedAt:now,archived:false}]};
@@ -75,7 +77,7 @@ export function validCitySave(s){
  Array.isArray(s.buildings)&&s.buildings.every(b=>validId(b.id)&&Object.hasOwn(BUILDINGS,b.kind))&&new Set(s.buildings.map(b=>b.id)).size===s.buildings.length&&
  validPlacements(s.placements)&&Object.keys(s.placements).every(id=>s.buildings.some(b=>b.id===id))&&rotations(s.rotations)&&
  (s.layoutUndo==null||(validPlacements(s.layoutUndo.placements)&&Object.keys(s.layoutUndo.placements).every(id=>s.buildings.some(b=>b.id===id))&&rotations(s.layoutUndo.rotations)))&&
- (s.notes===undefined||validNotes(s.notes))&&
+ (s.commerce===undefined||validCommerce(s.commerce))&&(s.notes===undefined||validNotes(s.notes))&&
  Array.isArray(s.projects)&&s.projects.every(p=>typeof p==='string'&&p.trim()&&p.length<=40)&&
  Array.isArray(s.tasks)&&s.tasks.every(t=>t&&typeof t.id==='string'&&typeof t.title==='string'&&typeof t.project==='string'&&typeof t.done==='boolean'&&typeof t.notes==='string'&&typeof t.today==='string'&&(t.dueDate===undefined||t.dueDate===''||validDate(t.dueDate))&&(t.pageId==null||(typeof t.pageId==='string'&&s.notes?.some(n=>n.id===t.pageId)))&&Array.isArray(t.steps)&&t.steps.every(x=>x&&typeof x.id==='string'&&typeof x.title==='string'&&typeof x.done==='boolean'))&&
  Array.isArray(s.history)&&s.history.every(h=>h&&Number.isFinite(h.at)&&typeof h.taskId==='string'&&positive(h.minutes)&&(h.note===undefined||typeof h.note==='string')&&(h.nextStep===undefined||typeof h.nextStep==='string')&&(h.outcome===undefined||['finished','progress','continue'].includes(h.outcome)))&&
