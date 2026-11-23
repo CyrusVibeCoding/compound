@@ -5,7 +5,7 @@ import * as THREE from 'three';
 export type Kind='core'|'press'|'assembler';
 const positions:Record<Kind,[number,number,number]>={core:[0,0,0],press:[3.3,0,-1],assembler:[-3.3,0,-1]};
 function Machine({kind,level,onSelect,reduced}:{kind:Kind,level:number,onSelect:(k:Kind)=>void,reduced:boolean}){
- const {scene}=useGLTF(`/models/${kind}.glb`);
+ const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${kind}.glb`);
  const copy=useMemo(()=>scene.clone(true),[scene]);
  useEffect(()=>{copy.traverse(o=>{o.visible=(!o.name.startsWith('L2')||level>=2)&&(!o.name.startsWith('L3')||level>=3);if(o instanceof THREE.Mesh){o.castShadow=true;o.receiveShadow=true;}})},[copy,level]);
  useFrame(({clock})=>{if(reduced)return;const t=clock.elapsedTime;const rotor=copy.getObjectByName('Rotor');if(rotor){rotor.rotation.y=t*.35;rotor.position.y=1.72+Math.sin(t)*.035;}const ring=copy.getObjectByName('InnerRing');if(ring)ring.rotation.y=t*.25;const hammer=copy.getObjectByName('Hammer');if(hammer)hammer.position.y=1.1+Math.sin(t*1.6)*.18;});

@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Use the displayed localhost address on this computer. For iPhone installation and offline use, serve `npm run build` output (`dist/`) over HTTPS. An iPhone cannot reach another computer through `localhost`; use an HTTPS host or a trusted local HTTPS setup. Source is available on GitHub. A live website has not been deployed.
+Use the displayed localhost address on this computer. For iPhone installation and offline use, serve `npm run build` output (`dist/`) over HTTPS. An iPhone cannot reach another computer through `localhost`; use an HTTPS host or a trusted local HTTPS setup. Source is available on GitHub. Live app: https://cyrusvibecoding.github.io/compound/ .
 
 ```sh
 npm run build
