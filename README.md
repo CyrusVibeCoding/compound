@@ -126,3 +126,12 @@ Validation: 38 unit tests, production build, GLB size/draw-call checks, and mobi
 An already-open installed app can retain the older JavaScript screen even after deployment. A new published-release check runs on load, return to foreground, and periodically. Settings shows the loaded release, Check for updates, and Save and update. The update saves current state first and navigates to the same app path with a unique query parameter to bypass stale navigation caches. Save failure blocks navigation and keeps export available. No localStorage or progress is cleared. Service-worker update-check requests bypass its offline cache so an offline response cannot masquerade as a current release.
 
 Validation: 40 unit tests and production build; mobile browser test covers latest/new release detection, bakery visibility, blocked update on save failure, fresh navigation, and writing preserved after updating. Users on the older screen must first reload/reopen the installed app or load the fresh release URL to receive this updater.
+
+
+## Visible visits and little outings (0.13)
+
+Residents pause for four seconds facing shop entrances. Eligible purchases trigger the existing sale popup and a small takeaway cup or paper bread bag carried until home. Browsers remain empty-handed. Errands alternate with simple visits: some residents continue from a shop to a seven-second park stop before heading home. Without destinations they still take a short stroll. No new buildings, needs, currencies, or income rules.
+
+Outings are transient and rebuilt after layout changes; they add nothing to save data. Bounded grid paths are computed only on layout changes; resident movement uses reusable timed segments. Existing 32-visible-resident and DPR limits remain. Tiny props share geometry/materials and cast no shadows. Calmer effects retain visit/payment timing while hiding props and keeping residents stationary. Visits pause in the Build catalog and hidden tabs; background time never fast-forwards shop purchases.
+
+Validation: 44 automated tests, including outing continuity, timing, unreachable shops, home return, and destination coverage; production TypeScript/Vite build. The managed preview relay was unavailable in this session, so pre-publication browser QA and physical iPhone Safari verification remain outstanding. Saves and update protections are unchanged.

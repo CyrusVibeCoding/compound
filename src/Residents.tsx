@@ -1,27 +1,81 @@
-import {useMemo,useRef,useState,useEffect} from 'react';import {useFrame} from '@react-three/fiber';import {useGLTF} from '@react-three/drei';import * as THREE from 'three';
-import {BUILDINGS} from './city.mjs';import {door,streetPath} from './paths.mjs';import type {BuildingInstance,Placements,Point} from './World';
-function Person({routes,index,reduced,stops,homeId,resident,onVisit,paused}:{routes:Point[][],stops:(string|null)[],homeId:string,resident:number,onVisit:(shopId:string,homeId:string,resident:number)=>void,paused:boolean,index:number,reduced:boolean}){
- const [trip,setTrip]=useState(0),route=routes[trip%routes.length];
- const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${index%2?'girl':'boy'}.glb?v=color-08`),root=useRef<THREE.Group>(null),progress=useRef(index*1.8),phase=useRef(index*2),visited=useRef(false);
- useEffect(()=>{progress.current=0;visited.current=false},[routes]);
- const model=useMemo(()=>{const copy=scene.clone(true);copy.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.raycast=()=>{}}});return {copy,limbs:['LeftLeg','RightLeg','LeftArm','RightArm'].map(n=>copy.getObjectByName(n))}},[scene]);
- const track=useMemo(()=>{const points=[...route,...route.slice(0,-1).reverse()],lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths[i-1]+Math.hypot(points[i][0]-points[i-1][0],points[i][2]-points[i-1][2]));return {points,lengths,total:lengths.at(-1)??0,mid:lengths[route.length-1]??0}},[route]);
- useFrame((_,delta)=>{const g=root.current;if(!g||paused||document.hidden)return;if(track.total<.01){progress.current+=Math.min(delta,.25);if(progress.current>6&&routes.length>1){progress.current=0;visited.current=false;setTrip(t=>t+1)}g.position.set(...track.points[index%track.points.length]);model.limbs.forEach(l=>{if(l)l.rotation.x=0});return}const dt=Math.min(delta,.25);phase.current+=dt;progress.current+=dt*.38;if(progress.current>=track.total+6){progress.current=0;visited.current=false;setTrip(t=>t+1);}const p=progress.current,visiting=p>=track.mid&&p<track.mid+3,dist=Math.min(p<track.mid?p:p<track.mid+3?track.mid:p-3,track.total);let i=1;while(i<track.lengths.length-1&&track.lengths[i]<dist)i++;const a=track.points[i-1],b=track.points[i],length=track.lengths[i]-track.lengths[i-1],t=length?(dist-track.lengths[i-1])/length:0;g.position.set(THREE.MathUtils.lerp(a[0],b[0],t),.025,THREE.MathUtils.lerp(a[2],b[2],t));if(visiting&&!visited.current){visited.current=true;const shop=stops[trip%stops.length];if(shop)onVisit(shop,homeId,resident)}if(reduced){g.position.set(...route[0]);model.limbs.forEach(l=>{if(l)l.rotation.x=0});return}const walking=!visiting&&p<track.total+3;g.rotation.y=Math.atan2(b[0]-a[0],b[2]-a[2]);model.limbs.forEach((l,j)=>{if(l)l.rotation.x=walking?Math.sin(phase.current*9+(j%2?Math.PI:0))*(j<2?.45:.3):0});});
- return <group ref={root} position={route[0]} scale={.32} raycast={()=>{}}><primitive object={model.copy} raycast={()=>{}}/></group>;
+import {useMemo,useRef,useEffect} from 'react';
+import {useFrame} from '@react-three/fiber';
+import {useGLTF} from '@react-three/drei';
+import * as THREE from 'three';
+import {BUILDINGS} from './city.mjs';
+import {door} from './paths.mjs';
+import {makeOuting,outingStops} from './outings.mjs';
+import type {BuildingInstance,Placements,Point} from './World';
+
+type Stop={id:string,kind:string,point:Point,facing:number};
+type Outing=ReturnType<typeof makeOuting>;
+const noRaycast=()=>{};
+// Shared low-poly props: no textures, lights, shadows, or per-frame React updates.
+const cupGeometry=new THREE.CylinderGeometry(.12,.09,.28,6);
+const lidGeometry=new THREE.CylinderGeometry(.135,.135,.04,6);
+const bagGeometry=new THREE.BoxGeometry(.25,.34,.16);
+const cupMaterial=new THREE.MeshStandardMaterial({color:'#f5ead5'});
+const lidMaterial=new THREE.MeshStandardMaterial({color:'#496a61'});
+const bagMaterial=new THREE.MeshStandardMaterial({color:'#bc8753'});
+function Person({outings,index,reduced,homeId,resident,onVisit,paused}:{outings:Outing[],homeId:string,resident:number,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,index:number,reduced:boolean}){
+ const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${index%2?'girl':'boy'}.glb?v=color-08`);
+ const root=useRef<THREE.Group>(null),cup=useRef<THREE.Group>(null),bag=useRef<THREE.Group>(null);
+ const clock=useRef({trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''});
+ useEffect(()=>{clock.current={trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''};if(cup.current)cup.current.visible=false;if(bag.current)bag.current.visible=false},[outings,index]);
+ const model=useMemo(()=>{const copy=scene.clone(true);copy.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.raycast=noRaycast}});return {copy,limbs:['LeftLeg','RightLeg','LeftArm','RightArm'].map(n=>copy.getObjectByName(n))}},[scene]);
+ useFrame((_,delta)=>{
+  const g=root.current;if(!g||paused||document.hidden)return;
+  const c=clock.current,dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
+  c.time+=dt;c.phase+=dt;
+  let segment=outing.segments[c.segment];
+  if(c.time>=segment.end){
+   if(segment.type==='visit'){
+    const stop=segment.stop as Stop;
+    if((stop.kind==='cafe'||stop.kind==='bakery')&&onVisit(stop.id,homeId,resident))c.carrying=stop.kind;
+   }
+   if(c.segment===outing.segments.length-1){c.trip++;c.segment=0;c.time=0;c.carrying='';}
+   else c.segment++;
+   segment=outings[c.trip%outings.length].segments[c.segment];
+  }
+  const walking=segment.type==='walk';
+  if(segment.type==='walk'){
+   const distance=(c.time-segment.start)*.38;let i=1;
+   while(i<segment.lengths.length-1&&segment.lengths[i]<distance)i++;
+   const a=segment.points[i-1],b=segment.points[i],length=segment.lengths[i]-segment.lengths[i-1],t=length?THREE.MathUtils.clamp((distance-segment.lengths[i-1])/length,0,1):0;
+   g.position.set(THREE.MathUtils.lerp(a[0],b[0],t),.025,THREE.MathUtils.lerp(a[2],b[2],t));
+   g.rotation.y=Math.atan2(b[0]-a[0],b[2]-a[2]);
+  }else{
+   g.position.set(segment.point[0],.025,segment.point[2]);
+   if(segment.type==='visit')g.rotation.y=segment.stop.facing;
+   if(segment.type==='home')c.carrying='';
+  }
+  if(reduced){const first=outings[0].segments[0];g.position.set(...(first.type==='walk'?first.points[0]:first.point));g.rotation.y=0;}
+  if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
+  if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
+  model.limbs.forEach((limb,j)=>{if(limb)limb.rotation.x=reduced?0:j===3&&c.carrying?-.65:walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0});
+ });
+ return <group ref={root} scale={.32} raycast={noRaycast}>
+  <primitive object={model.copy}/>
+  <group ref={cup} visible={false} position={[.25,.74,.23]}><mesh geometry={cupGeometry} material={cupMaterial} raycast={noRaycast}/><mesh position={[0,.16,0]} geometry={lidGeometry} material={lidMaterial} raycast={noRaycast}/></group>
+  <group ref={bag} visible={false} position={[.25,.55,.23]}><mesh geometry={bagGeometry} material={bagMaterial} raycast={noRaycast}/></group>
+ </group>;
 }
-export default function Residents({buildings,placements,rotations,reduced,onVisit,paused}:{onVisit:(shopId:string,homeId:string,resident:number)=>void,paused:boolean,buildings:BuildingInstance[],placements:Placements,rotations:Record<string,number>,reduced:boolean}){
+export default function Residents({buildings,placements,rotations,reduced,onVisit,paused}:{onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,buildings:BuildingInstance[],placements:Placements,rotations:Record<string,number>,reduced:boolean}){
  const residents=useMemo(()=>{
-  const placed=buildings.filter(b=>placements[b.id]),parks=placed.filter(b=>b.kind==='park'),cafes=placed.filter(b=>b.kind==='cafe'||b.kind==='bakery'),destinations=placed.filter(b=>!BUILDINGS[b.kind].residents);
+  const placed=buildings.filter(b=>placements[b.id]),parks=placed.filter(b=>b.kind==='park'),shops=placed.filter(b=>b.kind==='cafe'||b.kind==='bakery');
   const transform=(b:BuildingInstance,x:number,z:number):Point=>{const a=(rotations[b.id]??0)*Math.PI/2,p=placements[b.id];return [p[0]+Math.cos(a)*x+Math.sin(a)*z,0,p[2]-Math.sin(a)*x+Math.cos(a)*z]};
-  const obstacles:any[] = placed.filter(b=>BUILDINGS[b.kind].residents).map(b=>placements[b.id]);
+  const obstacles:any[]=placed.filter(b=>BUILDINGS[b.kind].residents).map(b=>placements[b.id]);
   for(const park of parks)for(const [x,z,radius] of [[-.55,-.48,.23],[.55,-.46,.23],[-.55,.42,.23],[0,-.126,.30],[0,-.48,.24],[0,.48,.24],[.57,.53,.12]])obstacles.push({point:transform(park,x,z),radius});
-  for(const cafe of cafes){obstacles.push({point:transform(cafe,0,-.35),radius:.5});for(const x of [-.5,.5])obstacles.push({point:transform(cafe,x,.5),radius:.18});}
+  for(const shop of shops){obstacles.push({point:transform(shop,0,-.35),radius:.5});for(const x of [-.5,.5])obstacles.push({point:transform(shop,x,.5),radius:.18});}
+  const destinations:Stop[]=placed.filter(b=>!BUILDINGS[b.kind].residents).map(b=>({id:b.id,kind:b.kind,point:transform(b,b.kind==='park'?.5:0,b.kind==='park'?0:.75),facing:(rotations[b.id]??0)*Math.PI/2+Math.PI}));
   let index=0;
-  return placed.filter(b=>BUILDINGS[b.kind].residents).flatMap(b=>Array.from({length:BUILDINGS[b.kind].residents},(_,i)=>{
-   const home=door(placements[b.id],rotations[b.id]),stops=destinations.length?destinations.map((_,n)=>destinations[(index+n)%destinations.length]):[null];
-   const routes=stops.map(stop=>{const target=stop?transform(stop,stop.kind!=='park'?0:.5,stop.kind!=='park'?.75:0):[home[0]+(i%2?-2:2),0,home[2]+1] as Point;return streetPath(home,target,obstacles) as Point[];});
-   return {id:`${b.id}-${i}`,index:index++,routes,stops:stops.map(stop=>stop?.id??null),homeId:b.id,resident:i};
-  })).slice(0,32);
+  return placed.filter(b=>BUILDINGS[b.kind].residents).flatMap(b=>Array.from({length:BUILDINGS[b.kind].residents},(_,i)=>({id:`${b.id}-${i}`,index:index++,homeId:b.id,resident:i}))).slice(0,32).map(r=>{
+   const home=door(placements[r.homeId],rotations[r.homeId]) as Point;
+   const plans=outingStops(destinations,r.index);
+   // Residents without destinations still take a short neighborhood stroll.
+   if(!destinations.length)plans[0]=[{id:'stroll',kind:'stroll',point:[home[0]+(r.resident%2?-2:2),0,home[2]+1],facing:0}];
+   return {...r,outings:plans.map(stops=>makeOuting(home,stops,obstacles))};
+  });
  },[buildings,placements,rotations]);
- return <group>{residents.map(r=><Person onVisit={onVisit} paused={paused} stops={r.stops} homeId={r.homeId} resident={r.resident} key={r.id} index={r.index} routes={r.routes} reduced={reduced}/>)}</group>;
+ return <group>{residents.map(r=><Person {...r} key={r.id} onVisit={onVisit} paused={paused} reduced={reduced}/>)}</group>;
 }
