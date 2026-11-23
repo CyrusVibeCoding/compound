@@ -1,5 +1,5 @@
 const names=['Maya','Leo','Amira','Noah','Iris','Theo','Zoe','Eli','Nora','Kai','Ava','Luca','Ruby','Omar','Ada','Finn','Milo','Esme','Sana','Jude','Lily','Arlo','Cleo','Remy'];
-export const FAVORITES={park:'the park',cafe:'the café',bakery:'the bakery'};
+export const FAVORITES={plaza:'the plaza',park:'the park',cafe:'the café',bakery:'the bakery'};
 // Stable across reloads, layout changes, storage, and JSON backups without adding save records.
 export function residentProfile(homeId,resident){
  let hash=2166136261;for(const c of `${homeId}:${resident}`)hash=Math.imul(hash^c.charCodeAt(0),16777619)>>>0;

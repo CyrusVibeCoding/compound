@@ -12,9 +12,10 @@ export function walkingNetwork(buildings,placements,rotations){
  const obstacles=placed.filter(b=>BUILDINGS[b.kind].residents).map(b=>placements[b.id]);
  for(const b of placed){
   if(b.kind==='park')for(const [x,z,radius] of [[-.55,-.48,.23],[.55,-.46,.23],[-.55,.42,.23],[0,-.126,.30],[0,-.48,.24],[0,.48,.24],[.57,.53,.12]])obstacles.push({point:transform(b,x,z),radius});
+  if(b.kind==='plaza')for(const [x,z,radius] of [[-.42,0,.24],[0,.49,.23],[0,-.49,.23],[.595,-.56,.10]])obstacles.push({point:transform(b,x,z),radius});
   if(b.kind==='cafe'||b.kind==='bakery'){obstacles.push({point:transform(b,0,-.35),radius:.5});for(const x of [-.5,.5])obstacles.push({point:transform(b,x,.5),radius:.18});}
  }
- const entrances=placed.map(b=>({id:b.id,kind:b.kind,point:BUILDINGS[b.kind].residents?transform(b,0,1):transform(b,b.kind==='park'?.5:0,b.kind==='park'?0:.75),facing:(rotations[b.id]??0)*Math.PI/2+Math.PI}));
+ const entrances=placed.map(b=>({id:b.id,kind:b.kind,point:BUILDINGS[b.kind].residents?transform(b,0,1):transform(b,(b.kind==='park'||b.kind==='plaza')?.5:0,(b.kind==='park'||b.kind==='plaza')?0:.75),facing:(rotations[b.id]??0)*Math.PI/2+Math.PI}));
  const graph=new Map(),edges=new Map();
  const add=route=>{
   if(route.length===1){const p=point(key(route[0]));if(obstacles.some(o=>{const at=Array.isArray(o)?o:o.point,r=Array.isArray(o)?.94:o.radius;return Math.abs(p[0]-at[0])<r&&Math.abs(p[2]-at[2])<r}))return;}

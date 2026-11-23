@@ -5,6 +5,8 @@ export const PARK_SPOTS=[
  {id:'back-bench',x:0,z:-.49,y:.125,facing:0,seated:true,via:[[.5,-.49]]},
  {id:'fountain',x:.5,z:0,y:.165,facing:-Math.PI/2,seated:false,via:[]},
 ];
+export const PLAZA_SPOTS=PARK_SPOTS.map(s=>s.id==='fountain'?{...s,id:'planter'}:{...s});
+export const placeSpots=kind=>kind==='plaza'?PLAZA_SPOTS:PARK_SPOTS;
 export function releaseVisit(world,resident){
  const visit=world.visits.get(resident);if(!visit)return;
  if(visit.spot)world.spots.delete(`${visit.buildingId}:${visit.spot.id}`);
@@ -18,8 +20,9 @@ export function beginVisit(world,resident,buildingId,kind,index=0){
  const current=world.visits.get(resident);if(current?.buildingId===buildingId)return current;
  releaseVisit(world,resident);
  let spot=null;
- if(kind==='park'){
-  for(let n=0;n<PARK_SPOTS.length;n++){const candidate=PARK_SPOTS[(index+n)%PARK_SPOTS.length];if(!world.spots.has(`${buildingId}:${candidate.id}`)){spot=candidate;break;}}
+ if(kind==='park'||kind==='plaza'){
+  const spots=placeSpots(kind);
+  for(let n=0;n<spots.length;n++){const candidate=spots[(index+n)%spots.length];if(!world.spots.has(`${buildingId}:${candidate.id}`)){spot=candidate;break;}}
   if(!spot)return null; // A full park is simply passed by; nobody waits in a queue.
   world.spots.set(`${buildingId}:${spot.id}`,resident);
  }

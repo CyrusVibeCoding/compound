@@ -105,6 +105,27 @@ for y in [-.68,.68]:
  box('Bench seat',(0,y,.43),(.65,.22,.07),white);box('Bench back',(0,y+.10,.56),(.65,.055,.23),white)
 cyl('Lamp post',(.82,-.75,.77),.028,1.1,silver);box('Lamp',(.82,-.75,1.35),(.16,.16,.22),bright)
 export('park')
+# Public plaza: broad stone paving, a raised planter, two seats and a lantern.
+asset='plaza'
+base();box('Plaza paving',(0,0,.18),(2.12,2.12,.12),stone,.045)
+for x in [-.7,0,.7]:
+ box('Paver joint',(x,0,.243),(.014,2.04,.008),bright,.002)
+for y in [-.7,0,.7]:
+ box('Paver joint',(0,y,.243),(2.04,.014,.008),bright,.002)
+box('Raised planter',(-.60,0,.37),(.55,.58,.30),cream,.04)
+box('Planter soil',(-.60,0,.525),(.46,.49,.025),wood,.01)
+ball('Shrub',(-.60,0,.72),(.26,.27,.24),green)
+ball('Leaf tips',(-.66,.04,.89),(.17,.18,.17),lightGreen)
+for y in [-.70,.70]:
+ for x in [-.23,.23]:box('Bench legs',(x,y,.33),(.06,.12,.18),metal)
+ box('Bench seat',(0,y,.43),(.72,.24,.07),wood)
+ box('Bench back',(0,y+.10,.57),(.72,.055,.24),wood)
+ for x in [-.34,.34]:box('Bench arm',(x,y,.54),(.04,.23,.04),metal,.008)
+cyl('Lamp post',(.85,.8,.84),.028,1.2,metal)
+box('Lamp',(.85,.8,1.47),(.18,.18,.24),lamp,.015)
+box('Lantern cap',(.85,.8,1.61),(.25,.25,.045),metal,.01)
+export('plaza')
+
 # Café: warm plaster, striped awning, readable cup sign and a two-table patio.
 asset='cafe'
 base()
@@ -194,4 +215,4 @@ def person(girl=False):
   hand=ball('Hand',(0,0,0),(.07,.07,.075),bright);hand.parent=bpy.data.objects[label+'Arm'];hand.location=(0,0,-.34)
  export('girl' if girl else 'boy')
 person();person(True)
-print('City: house, big house, park, boy and girl exported.')
+print('City asset export complete.')

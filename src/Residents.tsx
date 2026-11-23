@@ -9,7 +9,7 @@ import {greetingWorld,stepGreetings,type Neighbor} from './greetings.mjs';
 import type {walkingNetwork} from './walking.mjs';
 import {beginVisit,releaseVisit,parkActivity,parkPose,activityWorld} from './placeActivity.mjs';
 import {savedRoutine,rememberRoutine,advanceRoutine,routineLayout} from './routines.mjs';
-import {PARK_SPOTS} from './placeActivity.mjs';
+import {placeSpots} from './placeActivity.mjs';
 import {makeOuting,outingStops} from './outings.mjs';
 import type {BuildingInstance,Point} from './World';
 
@@ -36,7 +36,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
  useEffect(()=>{park.current=null;releaseVisit(activity,visitor);return()=>{releaseVisit(activity,visitor)}},[activity,visitor,outings,reduced]);
  const layout=useMemo(()=>routineLayout(outings),[outings]);
  const pendingPark=useRef(0),lastAt=useRef(Date.now());
- const parkDuration=(stop:Stop)=>reduced?7:parkActivity(stop.point,parkRotations[stop.id]??0,PARK_SPOTS[index%3]).duration;
+ const parkDuration=(stop:Stop)=>reduced?7:parkActivity(stop.point,parkRotations[stop.id]??0,placeSpots(stop.kind)[index%3]).duration;
  const clock=useRef({trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''});
  useEffect(()=>{
   const saved=savedRoutine(visitor,layout),at=Date.now();
@@ -51,11 +51,11 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   const c=clock.current;
   if(gap>.5){
    const active=activity.visits.get(visitor);
-   const next=advanceRoutine(outings,{...c,parkElapsed:active?.kind==='park'?active.elapsed:pendingPark.current},gap,parkDuration);
+   const next=advanceRoutine(outings,{...c,parkElapsed:(active?.kind==='park'||active?.kind==='plaza')?active.elapsed:pendingPark.current},gap,parkDuration);
    Object.assign(c,next);pendingPark.current=next.parkElapsed;releaseVisit(activity,visitor);park.current=null;actor.greeting=null;handle.tapRemaining=0;
   }
   lastAt.current=at;
-  rememberRoutine(visitor,{layout,trip:c.trip,segment:c.segment,time:Math.max(0,c.time),carrying:c.carrying,parkElapsed:activity.visits.get(visitor)?.kind==='park'?activity.visits.get(visitor).elapsed:pendingPark.current,at});
+  rememberRoutine(visitor,{layout,trip:c.trip,segment:c.segment,time:Math.max(0,c.time),carrying:c.carrying,parkElapsed:['park','plaza'].includes(activity.visits.get(visitor)?.kind)?activity.visits.get(visitor).elapsed:pendingPark.current,at});
   const dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
   if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
   if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
@@ -67,7 +67,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
     return;
    }
   }
-  if(actor.greeting&&!reduced){
+  if(actor.greeting&&!reduced&&!park.current){
    g.rotation.y=actor.greeting.angle;
    model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.x=j===3&&c.carrying?-.65:0;limb.rotation.z=j===2?-2.1+Math.sin((world.time-actor.greeting!.started)*12)*.25:0}});
    return;
@@ -86,25 +86,28 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   }
   if(segment.type==='visit'){
    const stop=segment.stop;
-   if(stop.kind==='park'&&!reduced){
+   if((stop.kind==='park'||stop.kind==='plaza')&&!reduced){
     const visit=beginVisit(activity,visitor,stop.id,stop.kind,index);
     actor.walking=false;
     if(!visit){c.time=segment.end;return;}
     if(!park.current){park.current=parkActivity(stop.point,parkRotations[stop.id]??0,visit.spot);visit.elapsed=Math.min(pendingPark.current,park.current.duration);pendingPark.current=0;}
     visit.elapsed+=dt;c.time=segment.start;
     const p=parkPose(park.current,visit.elapsed,pose.current);
-    handle.status=p.walking?'Strolling through the park':p.seated?'Resting on a park bench':'Enjoying the fountain';
+    handle.status=p.walking?`Strolling through ${stop.kind==='plaza'?'the plaza':'the park'}`:p.seated?'Resting on a bench':stop.kind==='plaza'?'Relaxing by the planter':'Enjoying the fountain';
+    actor.walking=stop.kind==='plaza'&&!p.walking;actor.socialPlace=stop.kind==='plaza'?stop.id:undefined;
+    if(actor.greeting&&stop.kind==='plaza')handle.status='Greeting a neighbor in the plaza';
     g.position.set(p.x,p.y,p.z);g.rotation.y=p.facing;actor.x=p.x;actor.z=p.z;
     model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=p.seated?(j<2?-1.1:j===3&&c.carrying?-.65:0):j===3&&c.carrying?-.65:p.walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
-    if(!reduced&&handle.tapRemaining>0){const arm=model.limbs[2];if(arm)arm.rotation.z=-2+Math.sin(handle.tapRemaining*12)*.25;}
+    if(!reduced&&(handle.tapRemaining>0||actor.greeting)){const arm=model.limbs[2];if(arm)arm.rotation.z=-2+Math.sin((handle.tapRemaining||world.time)*12)*.25;if(!p.seated&&actor.greeting)g.rotation.y=actor.greeting.angle;}
     if(visit.elapsed>=park.current.duration){releaseVisit(activity,visitor);park.current=null;c.time=segment.end;}
     return;
    }
    if(stop.kind==='cafe'||stop.kind==='bakery')beginVisit(activity,visitor,stop.id,stop.kind,index);
   }
-  if(segment.type==='visit')handle.status=segment.stop.kind==='park'?'Visiting the park':`Browsing ${FAVORITES[segment.stop.kind as keyof typeof FAVORITES]??'the neighborhood'}`;
+  if(segment.type==='visit')handle.status=`${['park','plaza'].includes(segment.stop.kind)?'Visiting':'Browsing'} ${FAVORITES[segment.stop.kind as keyof typeof FAVORITES]??'the neighborhood'}`;
   else if(segment.type==='home')handle.status='At home';
   else {const next=outings[c.trip%outings.length].segments[c.segment+1];handle.status=next?.type==='visit'?`Heading to ${FAVORITES[next.stop.kind as keyof typeof FAVORITES]??'the neighborhood'}`:'Heading home';}
+  actor.socialPlace=undefined;
   const walking=segment.type==='walk';
   if(segment.type==='walk'){
    const distance=(c.time-segment.start)*.38;let i=1;

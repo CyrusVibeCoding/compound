@@ -7,9 +7,9 @@ export function validRoutines(value){return !!value&&typeof value==='object'&&!A
 // Skip entire cycles mathematically; no replayed purchases or frame-by-frame offline work.
 export function advanceRoutine(outings,snapshot,seconds,parkDuration){
  let trip=snapshot.trip,segment=Math.min(snapshot.segment,outings[trip%outings.length].segments.length-1),offset=0,carrying=snapshot.carrying;
- const duration=s=>s.type==='visit'&&s.stop.kind==='park'?parkDuration(s.stop):s.end-s.start;
+ const duration=s=>s.type==='visit'&&(s.stop.kind==='park'||s.stop.kind==='plaza')?parkDuration(s.stop):s.end-s.start;
  const current=outings[trip%outings.length].segments[segment];
- offset=current.type==='visit'&&current.stop.kind==='park'?(snapshot.time>=current.end?duration(current):snapshot.parkElapsed):Math.max(0,snapshot.time-current.start);
+ offset=current.type==='visit'&&(current.stop.kind==='park'||current.stop.kind==='plaza')?(snapshot.time>=current.end?duration(current):snapshot.parkElapsed):Math.max(0,snapshot.time-current.start);
  let remaining=Math.max(0,seconds)+offset;
  const cycle=outings.reduce((sum,o)=>sum+o.segments.reduce((n,s)=>n+duration(s),0),0);
  if(remaining>=cycle){const cycles=Math.floor(remaining/cycle);remaining%=cycle;trip+=cycles*outings.length;carrying='';}
@@ -17,7 +17,7 @@ export function advanceRoutine(outings,snapshot,seconds,parkDuration){
   remaining-=duration(outings[trip%outings.length].segments[segment]);segment++;
   if(segment>=outings[trip%outings.length].segments.length){segment=0;trip++;carrying='';}
  }
- const s=outings[trip%outings.length].segments[segment],park=s.type==='visit'&&s.stop.kind==='park';
+ const s=outings[trip%outings.length].segments[segment],park=s.type==='visit'&&(s.stop.kind==='park'||s.stop.kind==='plaza');
  return {trip,segment,time:s.start+(park?0:remaining),parkElapsed:park?remaining:0,carrying};
 }
 

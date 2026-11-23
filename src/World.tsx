@@ -11,7 +11,7 @@ import {walkingNetwork} from './walking.mjs';
 import {activityWorld} from './placeActivity.mjs';
 import {Halo,SceneBurst} from './SceneEffects';
 import type {SceneEvent} from './effects';
-export type Kind='house'|'big-house'|'park'|'cafe'|'bakery';
+export type Kind='house'|'big-house'|'park'|'plaza'|'cafe'|'bakery';
 export type Point=[number,number,number];
 export type BuildingInstance={id:string,kind:Kind};
 export type Placements=Record<string,Point>;
