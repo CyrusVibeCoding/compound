@@ -16,7 +16,7 @@ Acceptance: create/edit several pages, find text in the body, filter, reorder an
 
 This version keeps data in the browser, with no account, uploads, sharing, or calendar. It is suitable for text notes; browser storage is finite. Real iPhone keyboard and Safari checks remain necessary.
 
-## Next: task dates and Calendar
+## Task dates and Calendar — deadlines shipped
 
 1. Add optional date-only due dates to tasks; preserve Today's manual selection.
 2. Define Today/overdue behavior without penalties or automatically inflating task rewards.
@@ -24,7 +24,7 @@ This version keeps data in the browser, with no account, uploads, sharing, or ca
 4. Add events with start/end times separately from task deadlines; decide timezone and all-day behavior.
 5. Verify date boundaries, daylight saving changes, backup migration, and phone interactions.
 
-## After Calendar
+## After Calendar — task/page links shipped
 
 - Link tasks to pages and show associated tasks inside a page/project.
 - Add small templates only after observing recurring uses (class notes, project plans, journal).
@@ -33,3 +33,9 @@ This version keeps data in the browser, with no account, uploads, sharing, or ca
 - Consider external calendar connections only after the internal calendar is useful.
 
 Ship in stages. Keep the city reward loop independent from note length, writing frequency, and calendar attendance.
+
+## Current status (0.11)
+
+Shipped Pages, task due dates, month/day calendar, past-due filtering, and task/Page links. Deadline changes preserve manual Today selection. Tasks due today appear automatically; overdue tasks have no penalty.
+
+Still planned: timed events and all-day event semantics, larger-library storage work, templates based on usage, and cross-device sync if needed. External calendar connections follow a useful internal events experience.

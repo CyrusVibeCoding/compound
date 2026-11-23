@@ -1,3 +1,4 @@
+import {validDate} from './dates.mjs';
 import {validNotes} from './notes.mjs';
 import {BUILDINGS,buildingCost,advanceRent} from './city.mjs';
 import {validId,validPlacements,snapPlacement} from './placement.mjs';
@@ -47,8 +48,8 @@ export function reduce(original,action){
  case 'rotate':{if(!state.placements[action.id])return state;return {...state,rotations:{...state.rotations,[action.id]:((state.rotations[action.id]??0)+1)%4},layoutUndo:undoFor(state)};}
  case 'undoLayout':return state.layoutUndo?{...state,placements:state.layoutUndo.placements,rotations:state.layoutUndo.rotations,layoutUndo:null}:state;
  case 'projectAdd':{const name=String(action.name).trim().slice(0,40);return !name||state.projects.some(p=>p.toLowerCase()===name.toLowerCase())?state:{...state,projects:[...state.projects,name]};}
- case 'add':{const title=String(action.title).trim().slice(0,240);if(!title)return state;return {...state,tasks:[...state.tasks,{id:action.id,title,project:action.project,done:false,steps:[],notes:'',today:dayKey(now)}]};}
- case 'edit':return {...state,tasks:state.tasks.map(t=>t.id!==action.id?t:{...t,...(typeof action.title==='string'&&action.title.trim()?{title:action.title.trim().slice(0,240)}:{}),...(typeof action.notes==='string'?{notes:action.notes.slice(0,10000)}:{}),...(state.projects.includes(action.project)?{project:action.project}:{}),...(action.today!==undefined?{today:action.today?dayKey(now):''}:{})})};
+ case 'add':{if(action.dueDate!==undefined&&action.dueDate!==''&&!validDate(action.dueDate))return state;if(action.pageId!=null&&!state.notes.some(n=>n.id===action.pageId))return state;if(state.tasks.some(t=>t.id===action.id))return state;const title=String(action.title).trim().slice(0,240);if(!title)return state;return {...state,tasks:[...state.tasks,{id:action.id,title,project:action.project,done:false,steps:[],notes:'',today:action.dueDate?'':dayKey(now),dueDate:action.dueDate??'',pageId:action.pageId??null}]};}
+ case 'edit':return {...state,tasks:state.tasks.map(t=>t.id!==action.id?t:{...t,...(typeof action.title==='string'&&action.title.trim()?{title:action.title.trim().slice(0,240)}:{}),...(typeof action.notes==='string'?{notes:action.notes.slice(0,10000)}:{}),...(state.projects.includes(action.project)?{project:action.project}:{}),...((action.dueDate===''||validDate(action.dueDate))?{dueDate:action.dueDate}:{}),...((action.pageId===null||state.notes.some(n=>n.id===action.pageId))?{pageId:action.pageId}:{}),...(action.today!==undefined?{today:action.today?dayKey(now):''}:{})})};
  case 'delete':return {...state,tasks:state.tasks.filter(t=>t.id!==action.id)};
  case 'step':return {...state,tasks:state.tasks.map(t=>t.id===action.id?{...t,steps:[...t.steps,{id:action.stepId,title:action.title,done:false}]}:t)};
  case 'toggleStep':return {...state,tasks:state.tasks.map(t=>t.id===action.id?{...t,steps:t.steps.map(s=>s.id===action.stepId?{...s,done:!s.done}:s)}:t)};
@@ -76,7 +77,7 @@ export function validCitySave(s){
  (s.layoutUndo==null||(validPlacements(s.layoutUndo.placements)&&Object.keys(s.layoutUndo.placements).every(id=>s.buildings.some(b=>b.id===id))&&rotations(s.layoutUndo.rotations)))&&
  (s.notes===undefined||validNotes(s.notes))&&
  Array.isArray(s.projects)&&s.projects.every(p=>typeof p==='string'&&p.trim()&&p.length<=40)&&
- Array.isArray(s.tasks)&&s.tasks.every(t=>t&&typeof t.id==='string'&&typeof t.title==='string'&&typeof t.project==='string'&&typeof t.done==='boolean'&&typeof t.notes==='string'&&typeof t.today==='string'&&Array.isArray(t.steps)&&t.steps.every(x=>x&&typeof x.id==='string'&&typeof x.title==='string'&&typeof x.done==='boolean'))&&
+ Array.isArray(s.tasks)&&s.tasks.every(t=>t&&typeof t.id==='string'&&typeof t.title==='string'&&typeof t.project==='string'&&typeof t.done==='boolean'&&typeof t.notes==='string'&&typeof t.today==='string'&&(t.dueDate===undefined||t.dueDate===''||validDate(t.dueDate))&&(t.pageId==null||(typeof t.pageId==='string'&&s.notes?.some(n=>n.id===t.pageId)))&&Array.isArray(t.steps)&&t.steps.every(x=>x&&typeof x.id==='string'&&typeof x.title==='string'&&typeof x.done==='boolean'))&&
  Array.isArray(s.history)&&s.history.every(h=>h&&Number.isFinite(h.at)&&typeof h.taskId==='string'&&positive(h.minutes)&&(h.note===undefined||typeof h.note==='string')&&(h.nextStep===undefined||typeof h.nextStep==='string')&&(h.outcome===undefined||['finished','progress','continue'].includes(h.outcome)))&&
  (s.session===null||(typeof s.session?.taskId==='string'&&Number.isFinite(s.session.started)&&[5,10,25].includes(s.session.duration))));}catch{return false}
 }

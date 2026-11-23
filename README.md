@@ -1,8 +1,8 @@
-# Little City · 0.10
+# Little City · 0.11
 
 A phone-first city built with real effort. Finish tasks, study, earn cash, place homes, and watch residents visit the park. White background, naturally colored models, transparent 3D canvas, and a permanently visible horizonless grid.
 
-**Play:** https://cyrusvibecoding.github.io/compound/?v=little-city-pages-10
+**Play:** https://cyrusvibecoding.github.io/compound/?v=little-city-calendar-11
 
 ![Basic house, big house, park, boy and girl models](models/city/preview.png)
 
@@ -75,7 +75,7 @@ Data stays in the browser. Export before changing devices or clearing storage. T
 
 ## Verification
 
-28 tests cover cash rewards/replay protection, study outcomes, purchases, failed drops, ownership/rotation/layout undo, finite rent accounting and backwards clocks, offline equivalence, resident routes, invalid backups, legacy migration/refunds, save isolation/recovery, reset rollback, import, and GLB size/joint/draw-call budgets.
+34 tests cover cash rewards/replay protection, study outcomes, purchases, failed drops, ownership/rotation/layout undo, finite rent accounting and backwards clocks, offline equivalence, resident routes, invalid backups, legacy migration/refunds, save isolation/recovery, reset rollback, import, and GLB size/joint/draw-call budgets.
 
 Mobile Chromium checks at 390 × 844 cover city model loading, resident totals, offline rent, actual tray drag purchases without text selection, task/study cash, the guide, calmer effects, migration, reset cancel/confirm, legacy import, and reload persistence. Physical iPhone 12/Safari gestures, Home Screen behavior, and frame rate remain unmeasured.
 
@@ -98,3 +98,13 @@ Notes autosave after a short typing pause and on leaving; current notes are incl
 The staged implementation plan is in [docs/pages-plan.md](docs/pages-plan.md). Calendar and task deadlines are planned next.
 
 Validation: 28 unit tests, production build, and mobile Chromium 390 × 844 checks for editing/reordering blocks, checklist state, body search, project filters, archive/restore, reload, project navigation, JSON export/import, and no horizontal overflow. Physical iPhone keyboard/Safari behavior still needs a device check.
+
+## Calendar and linked tasks
+
+Task details now include an optional date-only deadline and a linked Page. Calendar shows a Monday-first month grid and selected-day agenda, with task creation on the selected date. Counts show unfinished tasks; the agenda retains completed tasks. Dated tasks are the same task records used by Today and Pages. No duplicate rewards or calendar task copies.
+
+Today includes manually chosen tasks and tasks due today, once each. Past-due tasks have a separate filter; no penalties or automatic rescheduling. Setting or clearing a deadline preserves manual Today selection. Future calendar tasks do not automatically enter today's list. Dates use local calendar days, with no UTC conversion.
+
+Pages show associated tasks and can create them. Task details can link/unlink an existing task and open its page. Archived pages keep their links; tasks remain editable independently. Older saves without deadline/page fields remain supported. Backups preserve both fields.
+
+Validation: 34 unit tests, production build, and mobile Chromium 390 × 844 flow covering schedule/reschedule/clear, month navigation, Today/past-due, page-created tasks, links in both directions, completed agenda, cash-once behavior, persistence, and horizontal layout. Date tests cover leap years, year boundaries, and DST/local dates in Los Angeles, Auckland, and Tokyo. Physical iPhone Safari/keyboard still needs device testing.

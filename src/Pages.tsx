@@ -1,5 +1,6 @@
-import {useLayoutEffect,useRef,useState} from 'react';
+import {useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {ArrowLeft,Plus,Search,Archive,RotateCcw,ChevronUp,ChevronDown,Trash2,Folder,FileText,Heading,List,CheckSquare} from 'lucide-react';
+import type {Task} from './UI';
 import {matchingNotes} from './notes.mjs';
 type Block={id:string,type:'text'|'heading'|'bullet'|'check',text:string,checked:boolean};
 type Note={id:string,title:string,project:string|null,blocks:Block[],createdAt:number,updatedAt:number,archived:boolean};
@@ -8,8 +9,8 @@ function BlockInput({block,change,focus}:{block:Block,change:(text:string)=>void
  useLayoutEffect(()=>{if(ref.current){ref.current.style.height='auto';ref.current.style.height=ref.current.scrollHeight+'px'}},[block.text]);
  return <textarea ref={ref} autoFocus={focus} aria-label={block.type==='heading'?'Heading':block.type==='check'?'Checklist item':block.type==='bullet'?'Bullet item':'Paragraph'} placeholder={block.type==='heading'?'Heading':block.type==='check'?'Something to check off…':'Write something…'} maxLength={10000} rows={1} value={block.text} onChange={e=>change(e.target.value)}/>;
 }
-export default function Pages({notes,projects,dispatch,onProjects,saved,storageError}:{notes:Note[],projects:string[],dispatch:(action:any)=>void,onProjects:()=>void,saved:boolean,storageError:boolean}){
- const [selected,setSelected]=useState<string|null>(null),[query,setQuery]=useState(''),[project,setProject]=useState(''),[archived,setArchived]=useState(false),[focusBlock,setFocusBlock]=useState<string|null>(null);
+export default function Pages({notes,projects,dispatch,onProjects,saved,storageError,selected,setSelected,tasks,row,onOpenTask}:{selected:string|null,setSelected:(id:string|null)=>void,tasks:Task[],row:(task:Task)=>ReactNode,onOpenTask:(id:string)=>void,notes:Note[],projects:string[],dispatch:(action:any)=>void,onProjects:()=>void,saved:boolean,storageError:boolean}){
+ const [query,setQuery]=useState(''),[project,setProject]=useState(''),[archived,setArchived]=useState(false),[focusBlock,setFocusBlock]=useState<string|null>(null),[taskTitle,setTaskTitle]=useState('');
  const note=notes.find(n=>n.id===selected),results:Note[]=matchingNotes(notes,query,project,archived);
  function edit(patch:Partial<Note>){if(note)dispatch({type:'noteEdit',id:note.id,...patch})}
  function newNote(){const id=crypto.randomUUID();dispatch({type:'noteAdd',id});setSelected(id);setFocusBlock(null)}
@@ -28,6 +29,8 @@ export default function Pages({notes,projects,dispatch,onProjects,saved,storageE
   </div>)}</div>
   {note.blocks.length<1000&&<div className="add-block" aria-label="Add content">{([{type:'text',label:'Text',Icon:FileText},{type:'heading',label:'Heading',Icon:Heading},{type:'bullet',label:'Bullet',Icon:List},{type:'check',label:'Checklist',Icon:CheckSquare}] as const).map(({type,label,Icon})=><button key={type} onClick={()=>add(type)}><Icon size={16}/>{label}</button>)}</div>}
   {!note.blocks.length&&<p className="page-hint">Start with a paragraph, heading, or checklist above.</p>}
+  <section className="linked-tasks" aria-label="Page tasks"><h2>Tasks</h2>{tasks.filter(t=>t.pageId===note.id).sort((a,b)=>Number(a.done)-Number(b.done)).map(row)}{!tasks.some(t=>t.pageId===note.id)&&<p>No linked tasks yet. You can also link an existing task from its details.</p>}
+  {!note.archived&&<form onSubmit={e=>{e.preventDefault();if(!taskTitle.trim())return;const id=crypto.randomUUID();dispatch({type:'add',id,title:taskTitle,project:note.project??projects[0],pageId:note.id});setTaskTitle('');onOpenTask(id)}}><input aria-label="Page task title" placeholder="Add a related task…" value={taskTitle} maxLength={240} onChange={e=>setTaskTitle(e.target.value)}/><button className="icon-button" aria-label="Add page task" disabled={!taskTitle.trim()}><Plus size={18}/></button></form>}</section>
   <div className="note-footer"><span>Created {new Date(note.createdAt).toLocaleDateString()}</span>{!note.archived&&<button onClick={()=>{edit({archived:true});setSelected(null)}}><Archive size={16}/> Archive page</button>}</div>
  </section>;
  return <section className="pages-view" aria-label="Pages">
