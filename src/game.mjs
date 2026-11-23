@@ -18,7 +18,7 @@ function claim(state,now,outcome='progress',note=''){
  return addCharge({...state,matter:state.matter+reward,earned:state.earned+reward,minutes:state.minutes+duration,session:null,history:[{at:now,taskId,minutes:duration,outcome,note:String(note).slice(0,500)},...state.history].slice(0,200)},duration);
 }
 export function reduce(original,action){
- const now=action.now??Date.now();let state=advance(migrate(original,now),now);
+ const now=action.now??Date.now();if(action.type==='reset')return migrate(INITIAL,now);let state=advance(migrate(original,now),now);
  switch(action.type){
  case 'tick':return state;
  case 'build':return {...state,invention:{...state.invention,active:action.active===undefined?state.invention.active:!!action.active,hidden:action.hidden===undefined?state.invention.hidden:!!action.hidden,project:(action.project===''||state.projects.includes(action.project))?action.project:state.invention.project}};

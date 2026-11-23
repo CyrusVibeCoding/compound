@@ -10,3 +10,18 @@ export function saveLocal(storage,state,at=Date.now()){
   storage.setItem(SAVE_KEY,JSON.stringify(state));try{storage.setItem(TIME_KEY,String(at))}catch{}return {ok:true,at};
  }catch{return {ok:false,at:null}}
 }
+
+// Replace recovery copies too, so old progress cannot return after a reset.
+export function resetLocal(storage,state,at=Date.now()){
+ if(!validSave(state))return {ok:false,at:null};
+ const keys=[SAVE_KEY,BACKUP_KEY,LEGACY_KEY,TIME_KEY],previous=new Map(),written=[];
+ try{
+  for(const key of keys)previous.set(key,storage.getItem(key));
+  const raw=JSON.stringify(state);
+  for(const key of keys){storage.setItem(key,key===TIME_KEY?String(at):raw);written.push(key)}
+  return {ok:true,at};
+ }catch{
+  for(const key of written.reverse()){try{const value=previous.get(key);if(value===null)storage.removeItem(key);else storage.setItem(key,value)}catch{}}
+  return {ok:false,at:null};
+ }
+}

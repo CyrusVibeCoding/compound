@@ -6,7 +6,7 @@ import Farm from './Farm';
 import InventionSheet from './InventionSheet';
 import Unlocks from './Unlocks';
 import {newMachineCost} from './machines.mjs';
-import {loadLocal,saveLocal} from './storage.mjs';
+import {loadLocal,saveLocal,resetLocal} from './storage.mjs';
 import {milestones,effectiveFinish} from './progression.mjs';
 import {useReducedEffects,type SceneEvent} from './effects';
 import {INITIAL,reduce,cost,remaining,validSave,migrate,dayKey} from './game.mjs';
@@ -35,6 +35,16 @@ function App(){
  useEffect(()=>{persist(state)},[state]);
  useEffect(()=>{const flush=()=>{try{saveLocal(localStorage,latest.current)}catch{}};const hide=()=>{if(document.hidden)flush()};window.addEventListener('pagehide',flush);document.addEventListener('visibilitychange',hide);return()=>{window.removeEventListener('pagehide',flush);document.removeEventListener('visibilitychange',hide)}},[]);
  function manualSave(){const ok=persist();setToast(ok?'Saved on this phone.':'Could not save. Download a backup in Settings.');if(ok&&navigator.storage?.persist)navigator.storage.persist().catch(()=>{});}
+ function resetProgress(){
+  if(!window.confirm('Reset all progress on this device? This deletes tasks, notes, custom projects, focus history, Matter, Charge, machines, layout, and invention progress, including local recovery copies. Export a backup first if you want to keep them. This cannot be undone.'))return;
+  const at=Date.now(),fresh=migrate(INITIAL,at);
+  let result;try{result=resetLocal(localStorage,fresh,at)}catch{result={ok:false,at:null}}
+  if(!result.ok){setToast('Could not reset local save. Progress kept.');return;}
+  latest.current=fresh;previousWork.current=0;seen.current.clear();
+  dispatch({type:'reset',now:at});setNow(at);setSavedAt(at);setStorageError(false);
+  setSheet(null);setSelectedId(null);setTab('world');setTitle('');setProject('Business');setFilter(null);setListFilter('today');setNewProject('');setFlight(null);setSceneEvent(null);setUnlockNotice('');setToast('Progress reset. A fresh start.');
+ }
+
 
  const focus=!!state.session;
  useEffect(()=>{const update=()=>{const at=Date.now();setNow(at);dispatch({type:'tick',now:at})};const id=setInterval(update,focus||state.invention.active?1000:5000);const visible=()=>{if(!document.hidden)update()};document.addEventListener('visibilitychange',visible);window.addEventListener('focus',update);return()=>{clearInterval(id);document.removeEventListener('visibilitychange',visible);window.removeEventListener('focus',update)}},[focus,state.invention.active]);
@@ -80,7 +90,7 @@ function App(){
    <span className="eyebrow">SAVED ON THIS PHONE</span><h2>Keep what you build.</h2><div className={`save-status ${storageError?'error':''}`} role="status"><Save size={19}/><div><strong>{storageError?'Local save unavailable':savedAt?'Progress saved locally':'Preparing local save…'}</strong><span>{savedAt?`Last saved ${new Date(savedAt).toLocaleTimeString()}`:'Your tasks, machines, and layout stay in this browser.'}</span></div></div><button className="primary wide" onClick={manualSave}><Save size={17}/> Save on this phone</button><p className="help-note">Autosaves after changes and when leaving the app. A local recovery copy is also kept. Download a backup for a file you can keep when switching phones or clearing browser data.</p>
    <div className="motion-setting"><div><strong>Calmer effects</strong><span>Less movement. Same rewards.</span></div><button className={`toggle ${state.calm?'on':''}`} role="switch" aria-label="Calmer effects" aria-checked={state.calm} onClick={()=>dispatch({type:'setCalm',calm:!state.calm})}><i/></button></div><button className="secondary wide" onClick={()=>setSheet('unlocks')}><Sparkles size={18}/> Finishes & milestones</button>
    <button className="secondary wide" onClick={exportSave}><Download size={18}/> Export backup</button><label className="secondary wide upload"><Upload size={18}/> Import backup<input type="file" accept=".json,application/json" onChange={e=>importSave(e.target.files?.[0])}/></label>
-   <div className="help-note">Focus: 2 Matter +1 Charge per minute. Finished task: 20 Matter +5 Charge. Charge stops accumulating at tank capacity. Build mode spends Charge on permanent invention parts. Pause it to produce Matter. Only placed machines operate; stored Charge never expires.<br/><br/>On iPhone: Safari → Share → Add to Home Screen. Production catches up when reopened, including offline. Background notifications are not enabled.</div><small>Compound · Working inventions 0.6 · No account needed</small>
+   <div className="help-note">Focus: 2 Matter +1 Charge per minute. Finished task: 20 Matter +5 Charge. Charge stops accumulating at tank capacity. Build mode spends Charge on permanent invention parts. Pause it to produce Matter. Only placed machines operate; stored Charge never expires.<br/><br/>On iPhone: Safari → Share → Add to Home Screen. Production catches up when reopened, including offline. Background notifications are not enabled.</div><div className="reset-progress"><strong>Start fresh</strong><p className="help-note">Delete all tasks, notes, projects, resources, machines, inventions, and focus history on this device. Local recovery copies reset too. Export a backup above to keep a copy.</p><button className="secondary wide" onClick={resetProgress}>Reset all progress</button></div><small>Compound · Working inventions 0.6 · No account needed</small>
   </>:<>
    <span className="eyebrow">YOUR MACHINERY</span><h2>{names[machineKind]}</h2><p>{descriptions[machineKind]}</p>
    <div className="upgrade-detail"><Box size={30}/><div><strong>Level {(selectedMachine?.level??1)} of 3 · this {machineKind}</strong><span>{state.placements[sheet]?'Placed · active benefits':'In tray · place to operate'}</span></div></div>
