@@ -120,3 +120,9 @@ Resident arrival at a café or bakery can produce a $4/$3 sale and a floating po
 Shop sales happen only while the visible city is running and pause when the Build catalog is open. No offline sales are invented. Automatic offline home rent is unchanged. Calmer effects stop walking but retain visit timing/income. Shop income never counts as cash from real work. Commerce timestamps are included in backups and cleared on reset; older backups remain accepted.
 
 Validation: 38 unit tests, production build, GLB size/draw-call checks, and mobile Chromium 390 × 844 checks for actual touch scrolling, category filters, choosing/placing a bakery, cancel without spending, café/bakery payouts, floating cash, persistence, and no horizontal overflow. Physical iPhone Safari still needs device validation.
+
+## Update recovery (0.12.1)
+
+An already-open installed app can retain the older JavaScript screen even after deployment. A new published-release check runs on load, return to foreground, and periodically. Settings shows the loaded release, Check for updates, and Save and update. The update saves current state first and navigates to the same app path with a unique query parameter to bypass stale navigation caches. Save failure blocks navigation and keeps export available. No localStorage or progress is cleared. Service-worker update-check requests bypass its offline cache so an offline response cannot masquerade as a current release.
+
+Validation: 40 unit tests and production build; mobile browser test covers latest/new release detection, bakery visibility, blocked update on save failure, fresh navigation, and writing preserved after updating. Users on the older screen must first reload/reopen the installed app or load the fresh release URL to receive this updater.
