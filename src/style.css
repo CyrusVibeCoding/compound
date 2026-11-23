@@ -109,3 +109,5 @@ textarea:focus-visible,.add-task input:focus-visible{outline:2px solid #555;outl
 .shop-card:focus-visible{outline-offset:1px}
 .shop-card strong{overflow-wrap:anywhere}
 @media(pointer:coarse){.add-bottom select,.subtasks input,.task-options select,.task-notes{font-size:16px;min-height:44px}}
+
+.feedback-settings{margin-top:24px;padding-top:20px;border-top:1px solid #eee}.feedback-settings h3{font-size:16px}.feedback-settings p{font-size:13px;line-height:1.6;color:#666;margin:10px 0}

@@ -8,7 +8,7 @@ import {validLegacySave} from './legacy/save.mjs';
 import {machinesFor} from './legacy/machines.mjs';
 import {placementsFor} from './legacy/placement.mjs';
 export const DEFAULT_PROJECTS=['Business','School','Personal'];
-export const INITIAL={version:2,cash:40,earned:0,minutes:0,notes:[],tasks:[],buildings:[],placements:{},rotations:{},layoutUndo:null,session:null,history:[],projects:DEFAULT_PROJECTS,calm:false,rent:{lastTick:null,total:0}};
+export const INITIAL={version:2,cash:40,earned:0,minutes:0,notes:[],tasks:[],buildings:[],placements:{},rotations:{},layoutUndo:null,session:null,history:[],projects:DEFAULT_PROJECTS,calm:false,sound:false,haptics:false,rent:{lastTick:null,total:0}};
 export function dayKey(now=Date.now()){const d=new Date(now);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 export function migrate(state,now=Date.now()){
  if(state.version===2)return {...state,notes:state.notes??[],rent:state.rent.lastTick===null?{...state.rent,lastTick:now}:state.rent};
@@ -40,6 +40,7 @@ export function reduce(original,action){
  case 'restore':return validCitySave(action.state)?advanceRent(migrate(action.state,now),now):state;
  case 'dismissMigration':return {...state,migrationNotice:false};
  case 'setAtmosphere':return ['day','evening'].includes(action.atmosphere)?{...state,atmosphere:action.atmosphere}:state;
+ case 'setFeedback':return ['sound','haptics'].includes(action.key)?{...state,[action.key]:!!action.enabled}:state;
  case 'setCalm':return {...state,calm:!!action.calm};
  case 'place':{
   if(!Object.hasOwn(BUILDINGS,action.kind)||!validId(action.id))return state;
@@ -75,7 +76,7 @@ export function reduce(original,action){
 const positive=n=>Number.isFinite(n)&&n>=0;
 const rotations=r=>r&&typeof r==='object'&&!Array.isArray(r)&&Object.entries(r).every(([id,n])=>validId(id)&&Number.isInteger(n)&&n>=0&&n<4);
 export function validCitySave(s){
- try{return !!(s?.version===2&&positive(s.cash)&&positive(s.earned)&&positive(s.minutes)&&typeof s.calm==='boolean'&&(s.atmosphere===undefined||['day','evening'].includes(s.atmosphere))&&(positive(s.rent?.lastTick)||(s.rent?.lastTick===null&&s.buildings?.length===0))&&positive(s.rent?.total)&&
+ try{return !!(s?.version===2&&positive(s.cash)&&positive(s.earned)&&positive(s.minutes)&&typeof s.calm==='boolean'&&['sound','haptics'].every(k=>s[k]===undefined||typeof s[k]==='boolean')&&(s.atmosphere===undefined||['day','evening'].includes(s.atmosphere))&&(positive(s.rent?.lastTick)||(s.rent?.lastTick===null&&s.buildings?.length===0))&&positive(s.rent?.total)&&
  Array.isArray(s.buildings)&&s.buildings.every(b=>validId(b.id)&&Object.hasOwn(BUILDINGS,b.kind))&&new Set(s.buildings.map(b=>b.id)).size===s.buildings.length&&
  validPlacements(s.placements)&&Object.keys(s.placements).every(id=>s.buildings.some(b=>b.id===id))&&rotations(s.rotations)&&
  (s.layoutUndo==null||(validPlacements(s.layoutUndo.placements)&&Object.keys(s.layoutUndo.placements).every(id=>s.buildings.some(b=>b.id===id))&&rotations(s.layoutUndo.rotations)))&&

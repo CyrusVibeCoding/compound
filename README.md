@@ -205,3 +205,9 @@ Validation: 73 automated tests and production build. A 390×844 mobile Chromium 
 ## Smooth resident turns (0.20.1)
 
 Residents ease toward new headings along the shortest angle when walking, entering doors, or greeting. Hidden/initial poses and Calmer effects snap to their correct heading. Paths, routine checkpoints, elapsed catch-up, and payments are unchanged. Validation: 75 automated tests and production build; physical iPhone Safari feel remains unverified.
+
+## Optional sound and touch feedback (0.21)
+
+Settings → Sound & touch has separate saved switches, initially off, and Try feedback. Lightweight synthesized cues mark completed tasks, valid building placement, and study completion while visible. No background ambience, shop-sale sounds, notifications, downloads, or changes to economy/routines. Audio unlocks through user interaction, suspends when hidden or disabled, and repeated cues are throttled. Touch uses the vibration API where available; iPhone Safari does not support custom vibration. Preferences join autosaves, JSON backups/imports, and reset; older saves remain accepted.
+
+Validation: 77 automated tests and production build. Headless 390×844 Chromium verified defaults, toggle persistence after reload, generated audio nodes for preview and task completion, no horizontal overflow and no page errors. Automated checks verify preference compatibility, missing APIs, hidden-page silence and throttling. Audible quality, physical vibration and iPhone Safari audio remain unverified.
