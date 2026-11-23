@@ -24,7 +24,7 @@ npm test
 
 - Three custom Blender machines: Core, Press, Assembler, with level-specific attachments.
 - Editable `.blend` sources in `models/`; lightweight GLB runtime exports in `public/models/`.
-- White horizonless 3D world, pan/pinch zoom, recenter, tap-to-upgrade sheets.
+- White horizonless 3D farm with a bottom object tray. Touch-drag or tap-to-place, snapped placement, collision checks, pan/pinch zoom, recenter, and tap-to-upgrade sheets. Placement saves locally; old saves retain owned machines.
 - Task capture, three project categories, subtasks, completion history.
 - 5/10/25-minute focus sessions that recover from backgrounding or phone lock using timestamps.
 - 2 Matter per completed focus minute, 20 per completed task, repeat-claim protection.
@@ -46,6 +46,6 @@ The first command regenerates all `.blend` and `.glb` files. The second makes `m
 
 ## Verification
 
-TypeScript and production build pass. Four unit tests cover reward accounting, elapsed time recovery, upgrade costs/caps and backup validation. Blender files export successfully. Browser and physical iPhone performance, Home Screen install and offline behavior still need testing; no browser automation was available during this build. Target is iPhone 12; 60 fps has not been measured.
+TypeScript and production build pass. Eight unit tests cover rewards, elapsed-time recovery, upgrades, backup validation, save migration, placement costs, collisions and returning machines to the tray. Blender files export successfully. Browser and physical iPhone performance, Home Screen install and offline behavior still need testing; no browser automation was available during this build. Target is iPhone 12; 60 fps has not been measured.
 
 Local storage is device/browser-specific and can be removed by iOS or clearing browser data. Export backups regularly. No sync or server database is configured.

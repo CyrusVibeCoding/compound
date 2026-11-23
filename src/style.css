@@ -30,3 +30,21 @@
  .recenter{right:12px;bottom:12px}
  .toast{bottom:calc(76px + env(safe-area-inset-bottom))}
 }
+
+.farm-editor{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.farm-map{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;touch-action:none}
+.farm-map>div:first-child{position:absolute!important;inset:0}
+.object-tray{flex:0 0 auto;background:#fff;border-top:1px solid #ececec;padding:12px 20px 14px;z-index:2}
+.tray-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:720px;margin:0 auto 10px}
+.tray-heading strong{font-size:14px;font-weight:550}
+.tray-heading>span{font-size:12px;color:#888}
+.object-list{display:flex;gap:10px;max-width:720px;margin:auto}
+.object-card{flex:1;min-width:0;border:1px solid #e8e8e8;border-radius:13px;padding:13px;display:flex;align-items:center;justify-content:center;gap:12px;text-align:left;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;background:#fafafa;min-height:76px}
+.object-card.selected{border-color:#393b3e;background:#f0f0f0}
+.object-card strong{display:block;font-size:14px;font-weight:500}
+.object-card span{display:flex;align-items:center;gap:4px;color:#888;font-size:11px;margin-top:5px}
+.object-card:disabled{opacity:.45}
+.cancel-placement{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;gap:7px;border:1px solid #eee;border-radius:10px;background:#fff;padding:12px;font-size:12px;z-index:2}
+@media(max-width:600px){.object-tray{padding:10px 12px 12px}.object-list{gap:8px}.object-card{flex-direction:column;gap:8px;padding:10px 4px;min-height:96px;text-align:center}.object-card strong{font-size:13px}.object-card span{justify-content:center;margin-top:4px}.object-card>svg{height:25px}.tray-heading>span{font-size:11px}}
+
+.update-banner{position:fixed;top:calc(62px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:80;background:#27292b;color:white;border-radius:12px;padding:12px 20px;font-size:13px;box-shadow:0 3px 20px #0002;white-space:nowrap}
