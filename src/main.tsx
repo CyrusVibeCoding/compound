@@ -1,8 +1,11 @@
-import React,{useEffect,useReducer,useState} from 'react';
+import React,{useEffect,useReducer,useState,useRef} from 'react';
 import {createRoot} from 'react-dom/client';
-import {Box,Check,Plus,Layers,ListTodo,Folder,Settings,Download,Upload,CheckCircle2,RotateCw,Zap} from 'lucide-react';
+import {Box,Check,Plus,Layers,ListTodo,Folder,Settings,Download,Upload,CheckCircle2,RotateCw,Zap,Sparkles} from 'lucide-react';
 import {type Kind} from './World';
 import Farm from './Farm';
+import Unlocks from './Unlocks';
+import {milestones,effectiveFinish} from './progression.mjs';
+import {useReducedEffects,type SceneEvent} from './effects';
 import {INITIAL,reduce,cost,remaining,validSave,migrate,dayKey} from './game.mjs';
 import {advance,factoryStats,productionStatus,upgradeBenefit,amount} from './production.mjs';
 import {AnimatedMatter,TaskRow,TaskDetails,Modal,Focus,RewardFlight,type Task,type Flight} from './UI';
@@ -12,9 +15,14 @@ const descriptions={core:'Stores work-earned Charge and converts it into Matter.
 function read(){const now=Date.now();try{const s=JSON.parse(localStorage.getItem('compound-v1')||'null');return advance(migrate(validSave(s)?s:INITIAL,now),now)}catch{return migrate(INITIAL,now)}}
 function App(){
  const [state,dispatch]=useReducer(reduce,undefined,read),[tab,setTab]=useState('world');
- const [sheet,setSheet]=useState<Kind|'settings'|null>(null),[selectedId,setSelectedId]=useState<string|null>(null);
+ const [sheet,setSheet]=useState<Kind|'settings'|'unlocks'|null>(null),[selectedId,setSelectedId]=useState<string|null>(null);
  const [title,setTitle]=useState(''),[project,setProject]=useState('Business'),[filter,setFilter]=useState<string|null>(null),[listFilter,setListFilter]=useState('today'),[newProject,setNewProject]=useState('');
  const [now,setNow]=useState(Date.now()),[toast,setToast]=useState(''),[storageError,setStorageError]=useState(false),[updateReady,setUpdateReady]=useState(false),[flight,setFlight]=useState<Flight>(null);
+ const [sceneEvent,setSceneEvent]=useState<SceneEvent>(null),[unlockNotice,setUnlockNotice]=useState('');
+ const reduced=useReducedEffects(state.calm),steps=milestones(state),unlockCount=steps.filter(m=>m.achieved).length,seen=useRef(new Set(steps.filter(m=>m.achieved).map(m=>m.id)));
+ useEffect(()=>{const reached=steps.filter(m=>m.achieved&&!seen.current.has(m.id));reached.forEach(m=>seen.current.add(m.id));if(reached.length)setUnlockNotice(reached[reached.length-1].reward)},[unlockCount]);
+ useEffect(()=>{if(!sceneEvent)return;const id=setTimeout(()=>setSceneEvent(null),1100);return()=>clearTimeout(id)},[sceneEvent]);
+ useEffect(()=>{if(!unlockNotice)return;const id=setTimeout(()=>setUnlockNotice(''),5500);return()=>clearTimeout(id)},[unlockNotice]);
  useEffect(()=>{const updated=()=>setUpdateReady(true);window.addEventListener('compound-update',updated);return()=>window.removeEventListener('compound-update',updated)},[]);
  useEffect(()=>{try{localStorage.setItem('compound-v1',JSON.stringify(state));setStorageError(false)}catch{setStorageError(true)}},[state]);
  const focus=!!state.session;
@@ -24,18 +32,20 @@ function App(){
  const tasks:Task[]=state.tasks,projects:string[]=state.projects,pending=tasks.filter(t=>!t.done),today=pending.filter(t=>t.today===dayKey(now)),done=tasks.filter(t=>t.done).length;
  const selected=tasks.find(t=>t.id===selectedId),activeTask=tasks.find(t=>t.id===state.session?.taskId),stats=factoryStats(state),status=productionStatus(state);
  const list=listFilter==='today'?today:pending;
- function complete(id:string){dispatch({type:'complete',id});setToast('+20 Matter · Task finished. Tank recharged.');setSelectedId(null)}
+ function reward(kind:'collect'|'task'|'session',origin?:DOMRect){const target=document.querySelector('.matter')?.getBoundingClientRect(),from=origin??document.querySelector('.sheet')?.getBoundingClientRect();if(!target)return;const x=from?from.left+from.width/2:window.innerWidth/2,y=from?from.top+Math.min(from.height/2,100):window.innerHeight*.55;setFlight({id:performance.now(),kind,x,y,dx:target.left+target.width/2-x,dy:target.top+target.height/2-y})}
+ function pulse(kind:'place'|'upgrade'|'collect',point:[number,number,number],machine?:Kind){setSceneEvent({id:performance.now(),at:Date.now(),kind,point,machine})}
+ function complete(id:string,origin?:DOMRect){reward('task',origin);dispatch({type:'complete',id});setToast('+20 Matter · Task finished. Tank recharged.');setSelectedId(null)}
  function start(id:string,duration:number){const at=Date.now();dispatch({type:'start',id,duration,now:at});setNow(at);setSelectedId(null)}
  function add(e:React.FormEvent){e.preventDefault();if(!title.trim())return;dispatch({type:'add',id:crypto.randomUUID(),title,project});setTitle('');setListFilter('today');setToast('Added to Today.')}
- function collect(){const from=document.querySelector('.collect-button')?.getBoundingClientRect(),to=document.querySelector('.matter')?.getBoundingClientRect();if(from&&to)setFlight({id:Date.now(),x:from.left+from.width/2,y:from.top+from.height/2,dx:to.left+to.width/2-from.left-from.width/2,dy:to.top+to.height/2-from.top-from.height/2});dispatch({type:'collect'});setToast(`Collected ${amount(state.factory.stored)} Matter.`)}
+ function collect(){reward('collect',document.querySelector('.collect-button')?.getBoundingClientRect());if(state.placements.core)pulse('collect',state.placements.core);dispatch({type:'collect'});setToast(`Collected ${amount(state.factory.stored)} Matter.`)}
  function exportSave(){const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='compound-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
  async function importSave(file?:File){if(!file)return;try{const s=JSON.parse(await file.text());if(!validSave(s))throw Error();if(!window.confirm('Replace current progress with this backup?'))return;localStorage.setItem('compound-v1',JSON.stringify(s));location.reload()}catch{setToast('Could not read backup. Current progress kept.')}}
- const row=(task:Task)=><TaskRow key={task.id} task={task} onOpen={()=>setSelectedId(task.id)} onDone={()=>complete(task.id)} onFocus={()=>start(task.id,10)}/>;
- return <div className="app">
+ const row=(task:Task)=><TaskRow key={task.id} task={task} onOpen={()=>setSelectedId(task.id)} onDone={origin=>complete(task.id,origin)} onFocus={()=>start(task.id,10)}/>;
+ return <div className={`app ${reduced?'calm-effects':''}`}>
   {updateReady&&<button className="update-banner" onClick={()=>location.reload()}>Update ready · Tap to refresh</button>}
-  <header><a className="brand" href="#" onClick={e=>{e.preventDefault();setTab('world')}}><span className="brand-mark"><Box size={21}/></span>compound<span className="brand-period">.</span></a><div className="header-right"><div className="matter" aria-label={`${amount(state.matter)} Matter`}><span className="matter-icon">✦</span><AnimatedMatter value={state.matter}/><span>Matter</span></div><button className="icon-button settings" aria-label="Settings and backup" onClick={()=>setSheet('settings')}><Settings size={19}/></button></div></header>
+  <header><a className="brand" href="#" onClick={e=>{e.preventDefault();setTab('world')}}><span className="brand-mark"><Box size={21}/></span>compound<span className="brand-period">.</span></a><div className="header-right"><div className="matter" aria-label={`${amount(state.matter)} Matter`}><span className="matter-icon">✦</span><AnimatedMatter value={state.matter} reduced={reduced}/><span>Matter</span></div><button className="icon-button settings" aria-label="Settings and backup" onClick={()=>setSheet('settings')}><Settings size={19}/></button></div></header>
   <main>
-   {tab==='world'&&!focus&&<Farm levels={state.levels} matter={state.matter} placements={state.placements} rotations={state.rotations} onPlace={(kind,point)=>dispatch({type:'place',kind,point})} onSelect={setSheet} onUndo={()=>dispatch({type:'undoLayout'})} canUndo={!!state.layoutUndo} charge={state.factory.charge} chargeCapacity={stats.chargeCapacity} stored={state.factory.stored} status={status} onCollect={collect}/>}
+   {tab==='world'&&!focus&&<Farm levels={state.levels} matter={state.matter} placements={state.placements} rotations={state.rotations} onPlace={(kind,point)=>{dispatch({type:'place',kind,point});pulse('place',point,kind)}} onSelect={setSheet} onUndo={()=>dispatch({type:'undoLayout'})} canUndo={!!state.layoutUndo} charge={state.factory.charge} chargeCapacity={stats.chargeCapacity} stored={state.factory.stored} status={status} onCollect={collect} onUnlocks={()=>setSheet('unlocks')} unlockCount={unlockCount} look={effectiveFinish(state)} reduced={reduced} event={sceneEvent} selection={sheet&&sheet!=='settings'&&sheet!=='unlocks'?sheet:null}/>}
    {tab==='today'&&<section className="list-view"><span className="eyebrow">ONE THING AT A TIME</span><h1>Your next small step.</h1><p className="intro">Real work powers your farm.</p>
     <form className="add-task" onSubmit={add}><div><Plus size={20}/><input aria-label="New task" placeholder="What do you want to work on?" value={title} maxLength={240} onChange={e=>setTitle(e.target.value)}/></div><div className="add-bottom"><select aria-label="Task project" value={project} onChange={e=>setProject(e.target.value)}>{projects.map(p=><option key={p}>{p}</option>)}</select><button className="small-button" disabled={!title.trim()}>Add task <Plus size={15}/></button></div></form>
     <div className="filters"><button className={listFilter==='today'?'active':''} onClick={()=>setListFilter('today')}>Today · {today.length}</button><button className={listFilter==='all'?'active':''} onClick={()=>setListFilter('all')}>All tasks · {pending.length}</button></div>
@@ -51,23 +61,25 @@ function App(){
    </section>}
   </main>
   <nav aria-label="Main navigation">{[{id:'world',label:'World',Icon:Layers},{id:'today',label:'Today',Icon:ListTodo},{id:'projects',label:'Projects',Icon:Folder}].map(({id,label,Icon})=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={20}/><span>{label}</span>{id==='today'&&today.length>0&&<i>{today.length}</i>}</button>)}</nav>
-  {sheet&&<Modal close={()=>setSheet(null)} label={sheet==='settings'?'Settings':names[sheet]}>{sheet==='settings'?<>
+  {sheet==='unlocks'&&<Unlocks state={state} close={()=>setSheet(null)} onChoose={look=>{dispatch({type:'setLook',look});setToast('Finish applied. Your world, your way.');setSheet(null)}}/>}
+  {sheet&&sheet!=='unlocks'&&<Modal close={()=>setSheet(null)} label={sheet==='settings'?'Settings':names[sheet]}>{sheet==='settings'?<>
    <span className="eyebrow">YOUR WORLD, YOUR DATA</span><h2>Keep what you build.</h2><p>Progress saves on this device. Export a backup before clearing browser data or switching phones.</p>
+   <div className="motion-setting"><div><strong>Calmer effects</strong><span>Less movement. Same rewards.</span></div><button className={`toggle ${state.calm?'on':''}`} role="switch" aria-label="Calmer effects" aria-checked={state.calm} onClick={()=>dispatch({type:'setCalm',calm:!state.calm})}><i/></button></div><button className="secondary wide" onClick={()=>setSheet('unlocks')}><Sparkles size={18}/> Finishes & milestones</button>
    <button className="secondary wide" onClick={exportSave}><Download size={18}/> Export backup</button><label className="secondary wide upload"><Upload size={18}/> Import backup<input type="file" accept=".json,application/json" onChange={e=>importSave(e.target.files?.[0])}/></label>
-   <div className="help-note">Focus: 2 Matter +1 Charge per minute. Finished task: 20 Matter +5 Charge. Charge stops accumulating at tank capacity. Only placed machines operate; stored Charge never expires.<br/><br/>On iPhone: Safari → Share → Add to Home Screen. Production catches up when reopened, including offline. Background notifications are not enabled.</div><small>Compound · Powered farm 0.3 · No account needed</small>
+   <div className="help-note">Focus: 2 Matter +1 Charge per minute. Finished task: 20 Matter +5 Charge. Charge stops accumulating at tank capacity. Only placed machines operate; stored Charge never expires.<br/><br/>On iPhone: Safari → Share → Add to Home Screen. Production catches up when reopened, including offline. Background notifications are not enabled.</div><small>Compound · Motion & milestones 0.4 · No account needed</small>
   </>:<>
    <span className="eyebrow">YOUR MACHINERY</span><h2>{names[sheet]}</h2><p>{descriptions[sheet]}</p>
    <div className="upgrade-detail"><Box size={30}/><div><strong>Level {state.levels[sheet]} of 3</strong><span>{state.placements[sheet]?'Placed · active benefits':'In tray · place to operate'}</span></div></div>
    <div className="upgrade-benefit"><span className="field-label">{state.levels[sheet]===3?'COMPLETE':'NEXT UPGRADE'}</span><p>{upgradeBenefit(state,sheet)}</p></div>
-   <button className="primary wide" disabled={cost(sheet,state.levels[sheet])===null||state.matter<cost(sheet,state.levels[sheet])} onClick={()=>{dispatch({type:'upgrade',kind:sheet});setToast('Upgraded. New parts, more possibility.')}}>{state.levels[sheet]===3?<><Check size={18}/> Fully upgraded</>:<>Upgrade <span>✦ {cost(sheet,state.levels[sheet])}</span></>}</button>
+   <button className="primary wide" disabled={cost(sheet,state.levels[sheet])===null||state.matter<cost(sheet,state.levels[sheet])} onClick={()=>{dispatch({type:'upgrade',kind:sheet});if(state.placements[sheet])pulse('upgrade',state.placements[sheet],sheet);setSheet(null);setToast('Upgraded. New parts, more possibility.')}}>{state.levels[sheet]===3?<><Check size={18}/> Fully upgraded</>:<>Upgrade <span>✦ {cost(sheet,state.levels[sheet])}</span></>}</button>
    {state.placements[sheet]&&<div className="machine-actions"><button className="secondary wide" onClick={()=>dispatch({type:'rotate',kind:sheet})}><RotateCw size={17}/> Rotate 90°</button><button className="secondary wide" onClick={()=>{dispatch({type:'unplace',kind:sheet});setSheet(null)}}>Return to tray</button></div>}
    {cost(sheet,state.levels[sheet])!==null&&state.matter<cost(sheet,state.levels[sheet])&&<div className="shortfall">{amount(cost(sheet,state.levels[sheet])-state.matter)} more Matter needed.</div>}
    {sheet==='core'&&<p className="help-note"><Zap size={13}/> {amount(state.factory.charge)} / {stats.chargeCapacity} Charge · {amount(state.factory.stored)} / {stats.storageCapacity} output stored. {amount(stats.rate*stats.yield)} Matter/min while powered.</p>}
   </>}</Modal>}
   {selected&&!focus&&<TaskDetails key={selected.id} task={selected} projects={projects} dispatch={dispatch} close={()=>setSelectedId(null)} onStart={d=>start(selected.id,d)} onDone={()=>complete(selected.id)}/>}
-  {focus&&<Focus key={`${state.session.taskId}-${state.session.started}`} title={activeTask?.title||'Your focused time'} left={remaining(state.session,now)} duration={state.session.duration} onEnd={()=>{if(window.confirm('End this session? Incomplete sessions earn no effort reward.'))dispatch({type:'cancel'})}} onFinish={(outcome,note)=>{const at=Date.now();dispatch({type:'finishSession',outcome,note,now:at});setNow(at);setToast(outcome==='finished'?'Task finished. Farm charged.':outcome==='continue'?'Effort collected. Next round started.':'Progress saved. Farm charged.')}}/>}
-  <RewardFlight flight={flight}/>
-  {storageError&&<div className="storage-warning">Storage unavailable. Export your progress from Settings.</div>}{toast&&<div className="toast" role="status"><Check size={16}/>{toast}</div>}
+  {focus&&<Focus key={`${state.session.taskId}-${state.session.started}`} title={activeTask?.title||'Your focused time'} left={remaining(state.session,now)} duration={state.session.duration} onEnd={()=>{if(window.confirm('End this session? Incomplete sessions earn no effort reward.'))dispatch({type:'cancel'})}} onFinish={(outcome,note)=>{const at=Date.now();reward(outcome==='finished'?'task':'session');dispatch({type:'finishSession',outcome,note,now:at});setNow(at);setToast(outcome==='finished'?'Task finished. Farm charged.':outcome==='continue'?'Effort collected. Next round started.':'Progress saved. Farm charged.')}}/>}
+  <RewardFlight flight={flight} reduced={reduced}/>{unlockNotice&&!focus&&<button className="unlock-notice" onClick={()=>{setUnlockNotice('');setSheet('unlocks')}}><span><Sparkles size={21}/></span><div><small>MILESTONE REACHED</small><strong>{unlockNotice}</strong></div><span>View</span></button>}
+  {storageError&&<div className="storage-warning">Storage unavailable. Export your progress from Settings.</div>}{toast&&!unlockNotice&&<div className="toast" role="status"><Check size={16}/>{toast}</div>}
  </div>;
 }
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);

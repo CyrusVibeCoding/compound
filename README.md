@@ -1,8 +1,8 @@
-# Compound · powered farm 0.3
+# Compound · motion & milestones 0.4
 
 A phone-first, monochrome productivity game. Real work earns Matter and Charge. Charge powers the miniature farm you build.
 
-**Live app:** https://cyrusvibecoding.github.io/compound/?v=powered-farm-03
+**Live app:** https://cyrusvibecoding.github.io/compound/?v=motion-milestones-04
 
 ![Blender machine preview](models/preview.png)
 
@@ -28,6 +28,15 @@ For iPhone, open the live HTTPS app in Safari and choose Share → Add to Home S
 - Placement snaps to half-unit spacing and rejects overlaps. A temporary grid and ghost preview appear while editing.
 - Layout undo restores the previous placement/rotation without reversing purchases or production rewards. Machines remain owned after undo.
 - Pan empty space, pinch to zoom, or recenter to frame the saved layout.
+
+## Motion and milestones
+
+- Machines spring into position and rotate through the shortest angle. Drops and upgrades create brief ground ripples and a bounded particle burst.
+- Curved pale tracks carry small resource blocks while production runs. These tracks visualize the existing factory; they are not editable production connections.
+- Collection, task completion and focus outcomes send reward particles to the Matter counter. Task completion gets a brief checkmark pop. Machines gain a subtle selection ring.
+- Open the tray's sparkle button for five milestones and their progress. Finishes are visual rewards: Porcelain is available immediately, Graphite unlocks after 3 finished tasks, and Brushed silver after 25 completed focus minutes. Previously earned progress counts automatically.
+- Finish selection and the Calmer effects setting save with your existing data. System reduced-motion preferences always take priority. Calmer effects keep production and rewards identical.
+- No bloom, screen shake or full-screen flashes. Effects use a small fixed particle budget; the 3D farm unmounts during focus sessions.
 
 ## Work and production
 
@@ -61,6 +70,6 @@ The first command regenerates sources and exports. The second creates a showroom
 
 ## Verification and limits
 
-TypeScript, production build and 25 unit tests pass. Tests cover reward replay protection, capped online/offline production, storage, upgrades, capacity changes, placement accounting, layout undo, rotation, timer recovery, session outcomes, migration and backup validation.
+TypeScript, production build and 31 unit tests pass. Tests cover reward replay protection, capped online/offline production, storage, upgrades, capacity changes, placement accounting, layout undo, rotation, timer recovery, session outcomes, migration, backup validation, cosmetic gating and spring stability.
 
 Browser automation is unavailable in this environment. Physical iPhone 12 gestures, Safari Home Screen/offline behavior, visual animations and frame rate remain unverified. The design targets 60 fps; it has not been measured. Sound, prestige and more model families remain future work.

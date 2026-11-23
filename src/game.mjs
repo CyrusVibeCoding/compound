@@ -1,10 +1,11 @@
 import {KINDS,placementsFor,validPlacements,snapPlacement} from './placement.mjs';
 import {advance,addCharge} from './production.mjs';
+import {FINISHES,finishUnlocked} from './progression.mjs';
 export const DEFAULT_PROJECTS=['Business','School','Personal'];
 export const INITIAL={version:1,matter:0,earned:0,minutes:0,tasks:[],levels:{core:1,press:0,assembler:0},session:null,history:[],placements:{}};
 export function dayKey(now=Date.now()){const d=new Date(now);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 export function migrate(state,now=Date.now()){
- return {...state,placements:placementsFor(state),rotations:state.rotations??{},layoutUndo:state.layoutUndo??null,projects:[...new Set([...DEFAULT_PROJECTS,...(state.projects??[]),...state.tasks.map(t=>t.project)])],factory:state.factory??{charge:0,stored:0,lastTick:now},tasks:state.tasks.map(t=>({...t,notes:t.notes??'',today:t.today??dayKey(now)}))};
+ return {...state,look:state.look??'porcelain',calm:state.calm??false,placements:placementsFor(state),rotations:state.rotations??{},layoutUndo:state.layoutUndo??null,projects:[...new Set([...DEFAULT_PROJECTS,...(state.projects??[]),...state.tasks.map(t=>t.project)])],factory:state.factory??{charge:0,stored:0,lastTick:now},tasks:state.tasks.map(t=>({...t,notes:t.notes??'',today:t.today??dayKey(now)}))};
 }
 export function cost(kind,level){return ({core:[0,40,100],press:[60,90,150],assembler:[120,160,240]})[kind]?.[level]??null;}
 export function remaining(session,now=Date.now()){return session?Math.max(0,session.duration*60000-(now-session.started)):0;}
@@ -19,6 +20,8 @@ export function reduce(original,action){
  const now=action.now??Date.now();let state=advance(migrate(original,now),now);
  switch(action.type){
  case 'tick':return state;
+ case 'setLook':return finishUnlocked(state,action.look)?{...state,look:action.look}:state;
+ case 'setCalm':return {...state,calm:!!action.calm};
  case 'collect':return {...state,matter:state.matter+state.factory.stored,earned:state.earned+state.factory.stored,factory:{...state.factory,stored:0}};
  case 'place':{
   if(!KINDS.includes(action.kind))return state;
@@ -53,7 +56,7 @@ export function reduce(original,action){
 const finitePositive=n=>Number.isFinite(n)&&n>=0;
 const rotationValid=r=>r&&typeof r==='object'&&!Array.isArray(r)&&Object.entries(r).every(([k,v])=>KINDS.includes(k)&&Number.isInteger(v)&&v>=0&&v<=3);
 export function validSave(s){
- return s?.version===1&&finitePositive(s.matter)&&finitePositive(s.earned)&&finitePositive(s.minutes)&&
+ return (s?.look===undefined||FINISHES.some(f=>f.id===s.look))&&(s?.calm===undefined||typeof s.calm==='boolean')&&s?.version===1&&finitePositive(s.matter)&&finitePositive(s.earned)&&finitePositive(s.minutes)&&
  (s.placements===undefined||validPlacements(s.placements))&&(s.rotations===undefined||rotationValid(s.rotations))&&
  (s.factory===undefined||(finitePositive(s.factory?.charge)&&finitePositive(s.factory?.stored)&&Number.isFinite(s.factory?.lastTick)))&&
  (s.projects===undefined||(Array.isArray(s.projects)&&s.projects.every(p=>typeof p==='string'&&p.trim()&&p.length<=40)))&&
