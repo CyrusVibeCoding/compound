@@ -1,23 +1,21 @@
+import Part from './BuildPart';
 import {useRef} from 'react';
 import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
+import Clock from './Clock';
 import type {Point} from './World';
-export type InventionState={active:boolean,work:number,project:string,hidden?:boolean};
+export type InventionState={active:boolean,work:number,project:string,hidden?:boolean,blueprint?:string,builds?:Record<string,{work:number,project:string}>};
 export function buildPoint(placements:Record<string,Point>):Point {
  const points=Object.values(placements);
  const center=points.length?[points.reduce((s,p)=>s+p[0],0)/points.length,points.reduce((s,p)=>s+p[2],0)/points.length]:[0,0];
  for(let r=3;r<40;r+=2.5)for(let i=0;i<8;i++){const x=center[0]+Math.cos(i*Math.PI/4)*r,z=center[1]+Math.sin(i*Math.PI/4)*r;if(points.every(p=>Math.hypot(p[0]-x,p[2]-z)>=2.6))return [x,0,z]}
  return [0,0,-4];
 }
-function Part({visible,position,reduced,children}:{visible:boolean,position:Point,reduced:boolean,children:React.ReactNode}){
- const ref=useRef<THREE.Group>(null);
- useFrame((_,dt)=>{if(!ref.current)return;const target=visible?1:0;ref.current.scale.setScalar(reduced?target:THREE.MathUtils.damp(ref.current.scale.x,target,9,Math.min(dt,.05)));ref.current.position.y=position[1]+(1-ref.current.scale.x)*.5;});
- return <group ref={ref} position={position} scale={reduced&&visible?1:.001}>{children}</group>;
-}
 export default function Invention({state,point,reduced,onOpen}:{state:InventionState,point:Point,reduced:boolean,onOpen:()=>void}){
  const turn=useRef<THREE.Group>(null),work=state.work,complete=work>=50;
  useFrame((_,dt)=>{if(turn.current&&complete&&!reduced)turn.current.rotation.y+=Math.min(dt,.05)*.22});
  const box=(size:Point,color='#e3e5e7')=><mesh castShadow receiveShadow><boxGeometry args={size}/><meshStandardMaterial color={color} roughness={.35} metalness={.3}/></mesh>;
+ if(state.blueprint==='clock')return <Clock state={state} point={point} reduced={reduced} onOpen={onOpen}/>;
  return <group position={point} onClick={e=>{e.stopPropagation();onOpen()}}>
   <mesh position={[0,.04,0]}><cylinderGeometry args={[1.15,1.2,.08,48]}/><meshStandardMaterial color="#e6e8ea"/></mesh>
   {Array.from({length:10},(_,i)=><Part key={i} visible={work>=i+1} position={[Math.cos(i*Math.PI/5)*.65,.35,Math.sin(i*Math.PI/5)*.65]} reduced={reduced}>{box([.14,.6,.14],i%2?'#45494d':'#b6bbc0')}</Part>)}
