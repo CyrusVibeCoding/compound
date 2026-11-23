@@ -8,6 +8,8 @@ import {BUILDINGS} from './city.mjs';
 import {greetingWorld,stepGreetings,type Neighbor} from './greetings.mjs';
 import type {walkingNetwork} from './walking.mjs';
 import {beginVisit,releaseVisit,parkActivity,parkPose,activityWorld} from './placeActivity.mjs';
+import {savedRoutine,rememberRoutine,advanceRoutine,routineLayout} from './routines.mjs';
+import {PARK_SPOTS} from './placeActivity.mjs';
 import {makeOuting,outingStops} from './outings.mjs';
 import type {BuildingInstance,Point} from './World';
 
@@ -32,12 +34,29 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
  useEffect(()=>{handle.root=root.current;people.set(visitor,handle);return()=>{people.delete(visitor)}},[people,visitor,handle]);
  const park=useRef<ReturnType<typeof parkActivity>|null>(null),pose=useRef({x:0,y:0,z:0,seated:false,walking:false,facing:0});
  useEffect(()=>{park.current=null;releaseVisit(activity,visitor);return()=>{releaseVisit(activity,visitor)}},[activity,visitor,outings,reduced]);
+ const layout=useMemo(()=>routineLayout(outings),[outings]);
+ const pendingPark=useRef(0),lastAt=useRef(Date.now());
+ const parkDuration=(stop:Stop)=>reduced?7:parkActivity(stop.point,parkRotations[stop.id]??0,PARK_SPOTS[index%3]).duration;
  const clock=useRef({trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''});
- useEffect(()=>{clock.current={trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''};if(cup.current)cup.current.visible=false;if(bag.current)bag.current.visible=false},[outings,index]);
+ useEffect(()=>{
+  const saved=savedRoutine(visitor,layout),at=Date.now();
+  const next=saved?advanceRoutine(outings,saved,Math.max(0,at-saved.at)/1000,parkDuration):{trip:0,segment:0,time:0,carrying:'',parkElapsed:0};
+  clock.current={...next,phase:index*2};pendingPark.current=next.parkElapsed;lastAt.current=at;
+ },[outings,index,layout]);
+
  const model=useMemo(()=>{const copy=scene.clone(true);copy.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.raycast=noRaycast}});return {copy,limbs:['LeftLeg','RightLeg','LeftArm','RightArm'].map(n=>copy.getObjectByName(n))}},[scene]);
  useFrame((_,delta)=>{
   const g=root.current;if(!g||paused||document.hidden)return;
-  const c=clock.current,dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
+  const at=Date.now(),gap=Math.max(0,at-lastAt.current)/1000;
+  const c=clock.current;
+  if(gap>.5){
+   const active=activity.visits.get(visitor);
+   const next=advanceRoutine(outings,{...c,parkElapsed:active?.kind==='park'?active.elapsed:pendingPark.current},gap,parkDuration);
+   Object.assign(c,next);pendingPark.current=next.parkElapsed;releaseVisit(activity,visitor);park.current=null;actor.greeting=null;handle.tapRemaining=0;
+  }
+  lastAt.current=at;
+  rememberRoutine(visitor,{layout,trip:c.trip,segment:c.segment,time:Math.max(0,c.time),carrying:c.carrying,parkElapsed:activity.visits.get(visitor)?.kind==='park'?activity.visits.get(visitor).elapsed:pendingPark.current,at});
+  const dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
   if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
   if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
   if(handle.tapRemaining>0){
@@ -71,7 +90,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
     const visit=beginVisit(activity,visitor,stop.id,stop.kind,index);
     actor.walking=false;
     if(!visit){c.time=segment.end;return;}
-    if(!park.current)park.current=parkActivity(stop.point,parkRotations[stop.id]??0,visit.spot);
+    if(!park.current){park.current=parkActivity(stop.point,parkRotations[stop.id]??0,visit.spot);visit.elapsed=Math.min(pendingPark.current,park.current.duration);pendingPark.current=0;}
     visit.elapsed+=dt;c.time=segment.start;
     const p=parkPose(park.current,visit.elapsed,pose.current);
     handle.status=p.walking?'Strolling through the park':p.seated?'Resting on a park bench':'Enjoying the fountain';

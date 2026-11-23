@@ -165,3 +165,13 @@ Tap a visible neighbor to see a compact live name/status/favorite card and recei
 Settings → City atmosphere offers Day or Warm evening. Evening uses the existing ambient/directional lights with warmer colors and a lower sun, a gentle city background tint, and softly emissive windows. No new lights, post-processing, particles, clock simulation, or gameplay conditions. The optional atmosphere field is validated and included in normal autosaves/backups; old saves default to Day and reset restores Day. All existing payment intervals and saves remain compatible.
 
 Validation: 61 automated tests and production TypeScript/Vite build. Tests cover stable identity, preferred outings with destination coverage, pointer discrimination, and atmosphere compatibility/persistence without income changes. Headless mobile Chromium at 390×844 verified actual tap selection/waving, pan suppression, resident details, evening persistence after reload, and Calmer details with no page errors or horizontal overflow. Physical iPhone Safari testing remains outstanding.
+
+## Continuous resident routines (0.17)
+
+Resident routines now keep compact checkpoints independent of the mounted city scene. Opening Pages, Tasks, Calendar, or focus mode no longer starts outings over. Returning advances their walking, errands, and park activity by elapsed wall time; reopening the browser does the same from saved checkpoints. Whole outing cycles are skipped mathematically, without rendering or running background frames. The 3D scene still unmounts while elsewhere to save battery.
+
+Checkpoints include route progress, carried items, park progress, and a compact layout signature. They join normal autosaves, page-hide saves, JSON exports/imports, and confirmed reset. Old saves need no migration; their first city visit starts a checkpoint. Changed layouts safely rebuild affected outings. Up to 32 snapshots are retained, and removed homes are pruned. Park spots are reacquired without sharing seats; greetings and touch waves are transient.
+
+Only visible shop-visit completions may pay: elapsed-time catch-up never replays purchases, floating payments, or offline shop income. Offline home rent is unchanged. Calmer effects remain visually stationary. Build/Edit still freeze visible interaction, then catch up elapsed routines on resuming.
+
+Validation: 64 automated tests, production build, and headless 390×844 Chromium checks for tab continuity, persisted checkpoints after reload, and no page errors. Tests cover multi-cycle catch-up, park progress, backwards clocks, layout compatibility, backup checkpoints, and malformed data. Physical iPhone Safari remains unverified.
