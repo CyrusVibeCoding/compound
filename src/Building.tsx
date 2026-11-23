@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useRef} from 'react';import {useFrame,type ThreeEvent} from '@react-three/fiber';import {useGLTF} from '@react-three/drei';import * as THREE from 'three';
 import {spring} from './spring.mjs';import type {Kind,Point,DragHandlers} from './World';
 export default function Building({id,kind,position,rotation=0,reduced,ghost=false,handlers}:{id:string,kind:Kind,position:Point,rotation?:number,reduced:boolean,ghost?:boolean,handlers?:DragHandlers}){
- const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${kind}.glb`),root=useRef<THREE.Group>(null),velocity=useRef([0,0,0,0,0]),initial=useRef<Point>([position[0],position[1]+(ghost||reduced?0:.3),position[2]]);
+ const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${kind}.glb?v=color-08`),root=useRef<THREE.Group>(null),velocity=useRef([0,0,0,0,0]),initial=useRef<Point>([position[0],position[1]+(ghost||reduced?0:.3),position[2]]);
  const model=useMemo(()=>{const copy=scene.clone(true),materials:THREE.Material[]=[];copy.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=!ghost;o.receiveShadow=!ghost;if(ghost){const clone=(m:THREE.Material)=>{const n=m.clone();n.transparent=true;n.opacity=.3;n.depthWrite=false;materials.push(n);return n};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material)}}});return {copy,materials}},[scene,ghost]);
  useEffect(()=>()=>model.materials.forEach(m=>m.dispose()),[model]);
  useEffect(()=>{if((reduced||ghost)&&root.current){root.current.position.set(...position);root.current.rotation.y=rotation*Math.PI/2;root.current.scale.setScalar(.7);velocity.current.fill(0)}},[position,rotation,reduced,ghost]);

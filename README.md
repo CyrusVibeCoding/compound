@@ -1,8 +1,8 @@
 # Little City · 0.8
 
-A phone-first city built with real effort. Finish tasks, study, earn cash, place homes, and watch residents visit the park. White background, monochrome models, transparent 3D canvas, and a permanently visible horizonless grid.
+A phone-first city built with real effort. Finish tasks, study, earn cash, place homes, and watch residents visit the park. White background, naturally colored models, transparent 3D canvas, and a permanently visible horizonless grid.
 
-**Play:** https://cyrusvibecoding.github.io/compound/?v=little-city-08
+**Play:** https://cyrusvibecoding.github.io/compound/?v=little-city-color-08
 
 ![Basic house, big house, park, boy and girl models](models/city/preview.png)
 
@@ -76,3 +76,5 @@ Data stays in the browser. Export before changing devices or clearing storage. T
 22 tests cover cash rewards/replay protection, study outcomes, purchases, failed drops, ownership/rotation/layout undo, finite rent accounting and backwards clocks, offline equivalence, resident routes, invalid backups, legacy migration/refunds, save isolation/recovery, reset rollback, import, and GLB size/joint/draw-call budgets.
 
 Mobile Chromium checks at 390 × 844 cover city model loading, resident totals, offline rent, actual tray drag purchases without text selection, task/study cash, the guide, calmer effects, migration, reset cancel/confirm, legacy import, and reload persistence. Physical iPhone 12/Safari gestures, Home Screen behavior, and frame rate remain unmeasured.
+
+City color pass: warm cream cottage with terracotta roof, sage-blue large home with slate-blue roof, green lawns/trees, wood benches, blue fountain water, and residents with skin tones, brown hair, blue/coral clothing. Both Blender sources and GLBs use the same semantic materials. White canvas and grid remain.
