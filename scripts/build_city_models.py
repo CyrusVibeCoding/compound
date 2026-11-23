@@ -59,6 +59,8 @@ def window(x,y,z,w=.32,h=.4):
 def plant(x,y):
  box('Planter',(x,y,.23),(.28,.28,.26),gray);ball('Shrub',(x,y,.46),(.22,.22,.20),silver)
 def export(name):
+ if os.environ.get('CITY_ASSET') and os.environ['CITY_ASSET']!=name:
+  bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False);return
  bpy.ops.object.select_all(action='SELECT');bpy.ops.wm.save_as_mainfile(filepath=f'{ROOT}/models/city/{name}.blend')
  # Keep editable source objects; batch runtime meshes by parent/material to reduce draw calls.
  batches={}
@@ -103,6 +105,34 @@ for y in [-.68,.68]:
  box('Bench seat',(0,y,.43),(.65,.22,.07),white);box('Bench back',(0,y+.10,.56),(.65,.055,.23),white)
 cyl('Lamp post',(.82,-.75,.77),.028,1.1,silver);box('Lamp',(.82,-.75,1.35),(.16,.16,.22),bright)
 export('park')
+# Café: warm plaster, striped awning, readable cup sign and a two-table patio.
+asset='cafe'
+base()
+box('Cafe walls',(0,.46,.72),(1.8,1.05,1.2),cream)
+box('Flat roof',(0,.46,1.36),(1.98,1.2,.12),teal)
+box('Shop window',(-.48,-.085,.83),(.65,.06,.62),windowBlue)
+box('Cafe door',(.43,-.09,.70),(.40,.06,.98),teal)
+box('Door glass',(.43,-.13,.86),(.28,.03,.5),windowBlue)
+box('Handle',(.56,-.16,.62),(.025,.03,.15),wood)
+for i in range(8):
+ x=-.875+i*.25
+ box('Awning stripe',(x,-.30,1.19),(.25,.62,.065),clay if i%2==0 else bright,.008)
+ box('Awning valance',(x,-.60,1.10),(.25,.06,.18),clay if i%2==0 else bright,.008)
+box('Sign board',(0,-.10,1.56),(.68,.09,.38),wood)
+# A cream cup silhouette and small handle stand out even at phone scale.
+box('Cup symbol',(-.04,-.16,1.57),(.22,.025,.17),bright,.03)
+box('Cup saucer',(-.03,-.17,1.46),(.31,.025,.035),bright,.01)
+box('Cup handle',(.11,-.16,1.59),(.08,.025,.08),bright,.02)
+for x in [-.70,.70]:
+ cyl('Patio table post',(x,-.65,.38),.035,.45,metal,12)
+ cyl('Patio table top',(x,-.65,.62),.28,.055,wood,20)
+ for y in [-.97,-.31]:
+  box('Chair seat',(x,y,.35),(.27,.23,.055),teal,.02)
+  box('Chair back',(x,y+(-.09 if y<-.6 else .09),.48),(.27,.04,.23),teal,.015)
+  for dx in [-.09,.09]:box('Chair legs',(x+dx,y,.24),(.03,.15,.22),metal,.004)
+ cyl('Coffee cup',(x,-.65,.69),.045,.09,bright,12)
+export('cafe')
+
 # Joint pivots are named for lightweight runtime walking (no skeleton/physics).
 def person(girl=False):
  global asset

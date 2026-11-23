@@ -16,3 +16,19 @@ test('study pays $2/min once; finished outcome adds task bonus',()=>{let s=reduc
 test('continue restarts timer without completing task; cancelled sessions never pay',()=>{let s=reduce(seed(0),{type:'start',id:'math',duration:5,now:0});s=reduce(s,{type:'finishSession',outcome:'continue',now:300000});assert.equal(s.cash,10);assert.equal(s.session.started,300000);s=reduce(s,{type:'cancel',now:300000});assert.equal(s.cash,10);assert.equal(s.session,null);});
 test('custom projects, title edits and Today survive JSON backup',()=>{let s=reduce(seed(),{type:'projectAdd',name:'Shop',now:0});s=reduce(s,{type:'add',id:'a',title:'Offer',project:'Shop',now:0});s=reduce(s,{type:'edit',id:'a',title:'Send offer',today:true,now:0});assert.equal(s.tasks[0].today,dayKey(0));assert.equal(s.tasks[0].title,'Send offer');assert.ok(validSave(JSON.parse(JSON.stringify(s))));});
 test('calmer effects do not change rent and reset makes a truly fresh city',()=>{let s=place(seed(),'a','house',[0,0,0]);assert.equal(advanceRent({...s,calm:true},3600000).cash,advanceRent(s,3600000).cash);assert.deepEqual(reduce(s,{type:'reset',now:100}),migrate(INITIAL,100));});
+test('café purchases, storage, undo and backups preserve ownership without adding rent or residents',()=>{
+ let s=place(seed(),'home','house',[0,0,0]);s=place(s,'coffee','cafe',[3,0,0]);
+ assert.equal(s.cash,860);assert.equal(buildingCost(s,'cafe'),120);assert.deepEqual(cityStats(s),{homes:1,residents:1,rent:2});
+ assert.ok(validSave(JSON.parse(JSON.stringify(s))));assert.equal(advanceRent(s,3600000).cash,862);
+ s=reduce(s,{type:'rotate',id:'coffee',now:0});s=reduce(s,{type:'unplace',id:'coffee',now:0});
+ s=place(s,'coffee','cafe',[6,0,0]);assert.equal(s.cash,860);assert.equal(s.rotations.coffee,1);
+ s=reduce(s,{type:'undoLayout',now:0});assert.equal(s.placements.coffee,undefined);assert.equal(s.buildings.length,2);
+});
+test('café patio remains reachable around the shop at every rotation',()=>{
+ for(let r=0;r<4;r++){
+  const a=r*Math.PI/2,transform=(x,z)=>[3+Math.cos(a)*x+Math.sin(a)*z,0,-Math.sin(a)*x+Math.cos(a)*z];
+  const obstacles=[[0,0,0],{point:transform(0,-.35),radius:.5},...[-.5,.5].map(x=>({point:transform(x,.5),radius:.18}))];
+  const route=streetPath(door([0,0,0]),transform(0,.75),obstacles);assert.ok(route.length>1,`rotation ${r}`);
+  for(const [x,,z] of route)for(const obstacle of obstacles){const p=Array.isArray(obstacle)?obstacle:obstacle.point,radius=Array.isArray(obstacle)?.94:obstacle.radius;assert.ok(Math.abs(x-p[0])>=radius||Math.abs(z-p[2])>=radius);}
+ }
+});
