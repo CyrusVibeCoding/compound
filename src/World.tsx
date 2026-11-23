@@ -1,9 +1,11 @@
-import { Suspense, useEffect, useRef, useMemo, Component, type ReactNode, type RefObject } from 'react';
+import { Suspense, useEffect, useRef, useMemo, useState, useCallback, Component, type ReactNode, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import Building from './Building';
 import Residents from './Residents';
+import ResidentTouch,{type People} from './ResidentTouch';
+import {FAVORITES} from './personality.mjs';
 import WalkingPaths from './WalkingPaths';
 import {walkingNetwork} from './walking.mjs';
 import {activityWorld} from './placeActivity.mjs';
@@ -23,23 +25,32 @@ function EditorCamera({controls,reset,api,placements}:{controls:RefObject<any>,r
  useEffect(()=>{api.current={project:(x,y)=>{const r=gl.domElement.getBoundingClientRect();if(x<r.left||x>r.right||y<r.top||y>r.bottom)return null;const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1),camera);const point=new THREE.Vector3();return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),point)?[point.x,0,point.z]:null;}};return()=>{api.current=null}},[api,camera,gl]);
  return null;
 }
-export default function World({buildings,placements,rotations,reset,api,preview,dragging,editing,canEdit,onGround,handlers,reduced,event,selection,onVisit,sales,paused}:{onVisit:(shopId:string,homeId:string,resident:number)=>boolean,sales:{id:string,shopId:string,amount:number}[],paused:boolean,buildings:BuildingInstance[],placements:Placements,rotations:Record<string,number>,reset:number,api:RefObject<WorldApi|null>,preview:Preview,dragging:boolean,editing:boolean,canEdit:boolean,onGround:(x:number,y:number)=>void,handlers:DragHandlers,reduced:boolean,event:SceneEvent,selection:string|null}){
+export default function World({buildings,placements,rotations,reset,api,preview,dragging,editing,canEdit,onGround,handlers,reduced,event,selection,onVisit,sales,paused,evening}:{evening:boolean,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,sales:{id:string,shopId:string,amount:number}[],paused:boolean,buildings:BuildingInstance[],placements:Placements,rotations:Record<string,number>,reset:number,api:RefObject<WorldApi|null>,preview:Preview,dragging:boolean,editing:boolean,canEdit:boolean,onGround:(x:number,y:number)=>void,handlers:DragHandlers,reduced:boolean,event:SceneEvent,selection:string|null}){
  const network=useMemo(()=>walkingNetwork(buildings,placements,rotations),[buildings,placements,rotations]);
  const activity=useMemo(()=>activityWorld(),[network]);
+ const people=useMemo<People>(()=>new Map(),[network]);
+ const [personId,setPersonId]=useState<string|null>(null),[personInfo,setPersonInfo]=useState<{name:string,favorite:string,status:string}|null>(null);
+ const selectPerson=useCallback((id:string)=>{const p=people.get(id);if(p){setPersonId(id);setPersonInfo({...p.profile,status:p.status});}},[people]);
+ useEffect(()=>{setPersonId(null);setPersonInfo(null)},[people,editing,paused]);
+ useEffect(()=>{if(!personId)return;const timer=setInterval(()=>{const p=people.get(personId);if(!p){setPersonId(null);setPersonInfo(null)}else setPersonInfo(old=>old?.status===p.status?old:{...p.profile,status:p.status})},500);return()=>clearInterval(timer)},[people,personId]);
  const controls=useRef<any>(null);
  const wrappedHandlers={...handlers,start:(id:string,e:PointerEvent)=>{if(e.button!==0)return;if(controls.current)controls.current.enabled=false;handlers.start(id,e)}};
- return <Boundary><Canvas orthographic shadows dpr={[1,1.5]} camera={{position:[7,8,11],zoom:40}} gl={{antialias:true,powerPreference:'low-power',alpha:true}} onCreated={({gl})=>gl.setClearColor('#ffffff',0)} onPointerMissed={e=>onGround(e.clientX,e.clientY)}>
-  <ambientLight intensity={1.8}/><directionalLight position={[3,8,5]} intensity={3} castShadow shadow-mapSize={[1024,1024]} shadow-camera-left={-16} shadow-camera-right={16} shadow-camera-top={16} shadow-camera-bottom={-16} shadow-bias={-.001}/>
+ return <Boundary><><Canvas orthographic shadows dpr={[1,1.5]} camera={{position:[7,8,11],zoom:40}} gl={{antialias:true,powerPreference:'low-power',alpha:true}} onCreated={({gl})=>gl.setClearColor('#ffffff',0)} onPointerMissed={e=>onGround(e.clientX,e.clientY)}>
+  <ambientLight color={evening?'#ffe4ce':'#ffffff'} intensity={evening?1.5:1.8}/><directionalLight color={evening?'#ffd0a0':'#ffffff'} position={evening?[-4,6,6]:[3,8,5]} intensity={evening?2.2:3} castShadow shadow-mapSize={[1024,1024]} shadow-camera-left={-16} shadow-camera-right={16} shadow-camera-top={16} shadow-camera-bottom={-16} shadow-bias={-.001}/>
   <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.015,0]} receiveShadow onClick={e=>{e.stopPropagation();onGround(e.nativeEvent.clientX,e.nativeEvent.clientY)}}><planeGeometry args={[200,200]}/><shadowMaterial transparent opacity={.12}/></mesh>
   <Grid position={[0,-.008,0]} args={[200,200]} infiniteGrid followCamera cellSize={.5} sectionSize={2} cellThickness={editing ? .65 : .5} sectionThickness={.7} cellColor="#e8eaec" sectionColor="#dde1e4" fadeDistance={200} fadeStrength={1} raycast={()=>{}}/>
   <WalkingPaths network={network}/>
   <Suspense fallback={null}>
-   {buildings.filter(m=>placements[m.id]).map(m=><Building key={m.id} id={m.id} kind={m.kind} position={placements[m.id]} rotation={rotations[m.id]} activity={activity} paused={paused||editing} handlers={canEdit?wrappedHandlers:undefined} reduced={reduced}/>)}
+   {buildings.filter(m=>placements[m.id]).map(m=><Building key={m.id} id={m.id} kind={m.kind} position={placements[m.id]} rotation={rotations[m.id]} activity={activity} evening={evening} paused={paused||editing} handlers={canEdit?wrappedHandlers:undefined} reduced={reduced}/>)}
    {preview&&<><Building id={preview.id} kind={preview.kind} position={preview.point} rotation={rotations[preview.id]} reduced ghost/><mesh rotation={[-Math.PI/2,0,0]} position={[preview.point[0],.01,preview.point[2]]}><ringGeometry args={[1,1.025,48]}/><meshBasicMaterial color={preview.valid?'#96999c':'#333333'}/></mesh>{!preview.valid&&<group position={preview.point}>{[-1,1].map(n=><mesh key={n} rotation={[-Math.PI/2,0,n*Math.PI/4]} position={[0,.02,0]}><planeGeometry args={[.5,.04]}/><meshBasicMaterial color="#333"/></mesh>)}</group>}</>}
   </Suspense>
-  <Suspense fallback={null}><Residents onVisit={onVisit} paused={paused||editing} buildings={buildings} network={network} activity={activity} reduced={reduced}/></Suspense>{selection&&placements[selection]&&<Halo point={placements[selection]!} reduced={reduced}/>}<SceneBurst event={event} reduced={reduced}/>
+  <Suspense fallback={null}><Residents people={people} onVisit={onVisit} paused={paused||editing} buildings={buildings} network={network} activity={activity} reduced={reduced}/></Suspense>{selection&&placements[selection]&&<Halo point={placements[selection]!} reduced={reduced}/>}<SceneBurst event={event} reduced={reduced}/>
   {sales.filter(s=>placements[s.shopId]).map(s=><Html key={s.id} position={[placements[s.shopId][0],2,placements[s.shopId][2]]} center style={{pointerEvents:'none'}}><span className={`shop-income ${reduced?'still':''}`} role="status">+${s.amount}</span></Html>)}
   <OrbitControls ref={controls} makeDefault target={[0,.55,0]} enabled={!dragging} enableRotate={false} enableDamping={!reduced} minZoom={8} maxZoom={150} maxPolarAngle={Math.PI/2.2} touches={{ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_PAN}} mouseButtons={{LEFT:THREE.MOUSE.PAN,MIDDLE:THREE.MOUSE.DOLLY,RIGHT:THREE.MOUSE.PAN}}/>
+  <ResidentTouch people={people} disabled={editing||paused} onSelect={selectPerson}/>
   <EditorCamera controls={controls} reset={reset} api={api} placements={placements}/>
- </Canvas></Boundary>;
+ </Canvas>
+ {!editing&&!paused&&buildings.some(b=>placements[b.id]&&(b.kind==='house'||b.kind==='big-house'))&&<button className="meet-neighbors" onClick={()=>{const id=people.keys().next().value;if(id)selectPerson(id)}}>Neighbors</button>}
+ {personInfo&&!editing&&!paused&&<div className="resident-info" role="status"><div><strong>{personInfo.name}</strong><span>{personInfo.status}</span><small>Loves {FAVORITES[personInfo.favorite as keyof typeof FAVORITES]}</small></div><button aria-label="Meet next neighbor" onClick={()=>{const ids=[...people.keys()],id=ids[(ids.indexOf(personId!)+1)%ids.length];if(id)selectPerson(id)}}>Next</button><button aria-label="Close resident details" onClick={()=>{setPersonId(null);setPersonInfo(null)}}>×</button></div>}
+ </></Boundary>;
 }
