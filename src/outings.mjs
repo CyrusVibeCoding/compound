@@ -5,8 +5,8 @@ import {streetPath} from './paths.mjs';
 /** @typedef {{type:'walk',points:Point[],lengths:number[],start:number,end:number}|{type:'visit',stop:Stop,point:Point,start:number,end:number}|{type:'home',point:Point,start:number,end:number}} Segment */
 
 // Build bounded, reusable timelines when the layout changes; never pathfind per frame.
-/** @param {Point} home @param {Stop[]} stops @param {any[]} obstacles */
-export function makeOuting(home, stops, obstacles) {
+/** @param {Point} home @param {Stop[]} stops @param {any[]} obstacles @param {(start:Point,end:Point)=>Point[]} [routeFor] */
+export function makeOuting(home, stops, obstacles,routeFor=(start,end)=>streetPath(start,end,obstacles)) {
  /** @type {Segment[]} */
  const segments=[];let at=home,time=0;
  /** @param {Point[]} points */
@@ -16,14 +16,14 @@ export function makeOuting(home, stops, obstacles) {
   if(duration>0){segments.push({type:'walk',points,lengths,start:time,end:time+duration});time+=duration;}
  };
  for(const stop of stops){
-  const route=streetPath(at,stop.point,obstacles),end=route.at(-1);
+  const route=routeFor(at,stop.point),end=route.at(-1);
   // A failed search returns only the start. Never sell at an unreachable destination.
   if(Math.hypot(end[0]-stop.point[0],end[2]-stop.point[2])>.36)continue;
   walk(route);at=end;
   const duration=stop.kind==='park'?7:4;
   segments.push({type:'visit',stop,point:at,start:time,end:time+duration});time+=duration;
  }
- const back=streetPath(at,home,obstacles);
+ const back=routeFor(at,home);
  walk(back);
  segments.push({type:'home',point:back.at(-1),start:time,end:time+5});
  return {segments,duration:time+5};
