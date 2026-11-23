@@ -9,7 +9,7 @@ import {greetingWorld,stepGreetings,type Neighbor} from './greetings.mjs';
 import type {walkingNetwork} from './walking.mjs';
 import {beginVisit,releaseVisit,parkActivity,parkPose,activityWorld} from './placeActivity.mjs';
 import {savedRoutine,rememberRoutine,advanceRoutine,routineLayout} from './routines.mjs';
-import {buildingVisitPose,setDoorOpen} from './buildingVisits.mjs';
+import {buildingVisitPose,residentVisible,setDoorOpen} from './buildingVisits.mjs';
 import {placeSpots} from './placeActivity.mjs';
 import {makeOuting,outingStops} from './outings.mjs';
 import type {BuildingInstance,Point} from './World';
@@ -56,6 +56,9 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
    const next=advanceRoutine(outings,{...c,parkElapsed:(active?.kind==='park'||active?.kind==='plaza')?active.elapsed:pendingPark.current},gap,parkDuration);
    Object.assign(c,next);pendingPark.current=next.parkElapsed;releaseVisit(activity,visitor);park.current=null;actor.greeting=null;handle.tapRemaining=0;
   }
+  // Derive visibility on every frame, including restored/caught-up segments.
+  const currentSegment=outings[c.trip%outings.length].segments[c.segment];
+  g.visible=residentVisible(currentSegment,c.time,placements,parkRotations,homeId,homeKind);
   lastAt.current=at;
   rememberRoutine(visitor,{layout,trip:c.trip,segment:c.segment,time:Math.max(0,c.time),carrying:c.carrying,parkElapsed:['park','plaza'].includes(activity.visits.get(visitor)?.kind)?activity.visits.get(visitor).elapsed:pendingPark.current,at});
   const dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
@@ -142,7 +145,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
   model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=reduced?0:j===3&&c.carrying?-.65:walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
  });
- return <group name={`resident-${homeId}-${resident}`} ref={root} visible={false} scale={.32} raycast={noRaycast}>
+ return <group name={`resident-${homeId}-${resident}`} ref={root} scale={.32} raycast={noRaycast}>
   <primitive object={model.copy}/>
   <group ref={cup} visible={false} position={[.25,.74,.23]}><mesh geometry={cupGeometry} material={cupMaterial} raycast={noRaycast}/><mesh position={[0,.16,0]} geometry={lidGeometry} material={lidMaterial} raycast={noRaycast}/></group>
   <group ref={bag} visible={false} position={[.25,.55,.23]}><mesh geometry={bagGeometry} material={bagMaterial} raycast={noRaycast}/></group>

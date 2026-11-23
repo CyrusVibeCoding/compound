@@ -13,3 +13,11 @@ export function buildingVisitPose(kind,origin,rotation,elapsed,duration,out={x:0
 export function setDoorOpen(world,buildingId,resident,open){
  let people=world.doors.get(buildingId);if(open){if(!people){people=new Set();world.doors.set(buildingId,people)}people.add(resident)}else if(people){people.delete(resident);if(!people.size)world.doors.delete(buildingId)}
 }
+
+// Visibility is a pose property, never a latch left over from a previous segment.
+export function residentVisible(segment,time,placements,rotations,homeId,homeKind){
+ const shop=segment.type==='visit'&&['cafe','bakery'].includes(segment.stop.kind);
+ if(segment.type!=='home'&&!shop)return true;
+ const id=shop?segment.stop.id:homeId,kind=shop?segment.stop.kind:homeKind;
+ return !buildingVisitPose(kind,placements[id],rotations[id]??0,time-segment.start,segment.end-segment.start,undefined,segment.point).inside;
+}

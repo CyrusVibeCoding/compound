@@ -1,4 +1,4 @@
-# Little City · 0.12
+# Little City · 0.20
 
 A phone-first city built with real effort. Finish tasks, study, earn cash, place homes, and watch residents visit the park. White background, naturally colored models, transparent 3D canvas, and a permanently visible horizonless grid.
 
@@ -193,3 +193,11 @@ Residents now walk from their route endpoint through an actual doorway, remain h
 Hidden residents cannot be selected through buildings on the map, but Neighbors still shows their identity and indoor status. No interiors, new lights, physics, currencies, or changes to rent/payment eligibility. Paid shop completions still respect the existing ten-minute shop/resident limits, and elapsed-time catch-up still awards no offline shop income. Layout signatures safely rebuild routines when durations change. Calmer effects retain visit timing without travel or door movement.
 
 Validation: 72 tests, production build, and headless mobile Chromium. New tests cover all four rotations, exact route-endpoint return, concealed indoor phases, shared door requests and cleanup, named home door hinges, and updated visit durations. Browser checks observed concealed residents at homes and stores, both kinds of doors opening, residents re-emerging, accessible details, and no page errors. Physical iPhone Safari remains unverified.
+
+## Resident visibility and mobile polish (0.20)
+
+Resident visibility is now derived from the current routine phase on every frame. Previously, hidden state could persist across elapsed-time catch-up or a restored outdoor segment, leaving walking or seated neighbors invisible until a later segment boundary. Indoor concealment and doorway travel remain. Routine checkpoints and purchase eligibility are unchanged; catch-up never pays shop income.
+
+Build cards have room for focus outlines. Task filters keep their labels on one line and scroll horizontally, selected filters expose their state, completion/add controls have larger touch targets, and small task form controls use 16px text on coarse pointers to avoid iPhone input zoom. Hover feedback for task checks and icon buttons is mouse-only. Sheets contain their scroll and keyboard focus wraps correctly from the dialog itself.
+
+Validation: 73 automated tests and production build. A 390×844 mobile Chromium check verified three visible moving residents before and after switching to Today and back, Build category filtering, task creation, and no page errors or horizontal overflow. Physical iPhone Safari remains unverified.
