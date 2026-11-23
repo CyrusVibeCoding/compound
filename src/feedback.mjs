@@ -3,7 +3,7 @@ export function createFeedback(env=globalThis){
  let context=null,last=-Infinity;
  const hidden=()=>env.document?.hidden;
  function unlock(){try{const Audio=env.AudioContext??env.webkitAudioContext;if(!Audio||hidden())return;context??=new Audio();if(context.state==='suspended')context.resume().catch(()=>{});}catch{}}
- function stop(){try{context?.suspend().catch(()=>{});env.navigator?.vibrate?.(0);}catch{}}
+ function stop(){const old=context;context=null;try{old?.close().catch(()=>{});env.navigator?.vibrate?.(0);}catch{}}
  function play(kind,{sound=false,haptics=false}={}){
   if(hidden()||!['task','place','study'].includes(kind))return false;
   const at=env.performance.now();if(at-last<150)return false;last=at;
