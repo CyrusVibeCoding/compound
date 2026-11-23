@@ -1,13 +1,14 @@
+import {validNotes} from './notes.mjs';
 import {BUILDINGS,buildingCost,advanceRent} from './city.mjs';
 import {validId,validPlacements,snapPlacement} from './placement.mjs';
 import {validLegacySave} from './legacy/save.mjs';
 import {machinesFor} from './legacy/machines.mjs';
 import {placementsFor} from './legacy/placement.mjs';
 export const DEFAULT_PROJECTS=['Business','School','Personal'];
-export const INITIAL={version:2,cash:40,earned:0,minutes:0,tasks:[],buildings:[],placements:{},rotations:{},layoutUndo:null,session:null,history:[],projects:DEFAULT_PROJECTS,calm:false,rent:{lastTick:null,total:0}};
+export const INITIAL={version:2,cash:40,earned:0,minutes:0,notes:[],tasks:[],buildings:[],placements:{},rotations:{},layoutUndo:null,session:null,history:[],projects:DEFAULT_PROJECTS,calm:false,rent:{lastTick:null,total:0}};
 export function dayKey(now=Date.now()){const d=new Date(now);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 export function migrate(state,now=Date.now()){
- if(state.version===2)return {...state,rent:state.rent.lastTick===null?{...state.rent,lastTick:now}:state.rent};
+ if(state.version===2)return {...state,notes:state.notes??[],rent:state.rent.lastTick===null?{...state.rent,lastTick:now}:state.rent};
  const retired=machinesFor(state),upgradeCosts={core:[40,100],press:[90,150],assembler:[160,240]},refund=retired.reduce((sum,m)=>sum+upgradeCosts[m.kind].slice(0,Math.max(0,(m.level??state.levels[m.kind])-1)).reduce((a,b)=>a+b,0),0);
  const mapping={core:'house',press:'big-house',assembler:'park'};
  return {...INITIAL,cash:state.matter+(state.factory?.charge??0)+(state.factory?.stored??0)+refund,earned:state.earned,minutes:state.minutes,tasks:state.tasks.map(t=>({...t,notes:t.notes??'',today:t.today??dayKey(now)})),projects:[...new Set([...DEFAULT_PROJECTS,...(state.projects??[]),...state.tasks.map(t=>t.project)])],history:state.history,session:state.session,buildings:machinesFor(state).map(m=>({id:m.id,kind:mapping[m.kind]})),placements:placementsFor(state),rotations:state.rotations??{},layoutUndo:state.layoutUndo??null,calm:state.calm??false,rent:{lastTick:now,total:0},legacyFactory:{...state},conversionCredit:refund};
@@ -23,8 +24,16 @@ function claim(state,now,outcome='progress',note='',nextStep=''){
 export function reduce(original,action){
  const now=action.now??Date.now();if(action.type==='reset')return {...INITIAL,rent:{lastTick:now,total:0}};let state=advanceRent(migrate(original,now),now);
  switch(action.type){
+ case 'noteAdd':{
+  if(typeof action.id!=='string'||!action.id||state.notes.some(n=>n.id===action.id))return state;
+  return {...state,notes:[...state.notes,{id:action.id,title:'',project:null,blocks:[],createdAt:now,updatedAt:now,archived:false}]};
+ }
+ case 'noteEdit':{
+  const notes=state.notes.map(n=>n.id===action.id?{...n,...(typeof action.title==='string'?{title:action.title.slice(0,160)}:{}),...(action.project===null||state.projects.includes(action.project)?{project:action.project}:{}),...(Array.isArray(action.blocks)?{blocks:action.blocks}:{}),...(typeof action.archived==='boolean'?{archived:action.archived}:{}),updatedAt:now}:n);
+  return validNotes(notes)?{...state,notes}:state;
+ }
  case 'tick':return state;
- case 'restore':return validCitySave(action.state)?advanceRent(action.state,now):state;
+ case 'restore':return validCitySave(action.state)?advanceRent(migrate(action.state,now),now):state;
  case 'dismissMigration':return {...state,migrationNotice:false};
  case 'setCalm':return {...state,calm:!!action.calm};
  case 'place':{
@@ -65,6 +74,7 @@ export function validCitySave(s){
  Array.isArray(s.buildings)&&s.buildings.every(b=>validId(b.id)&&Object.hasOwn(BUILDINGS,b.kind))&&new Set(s.buildings.map(b=>b.id)).size===s.buildings.length&&
  validPlacements(s.placements)&&Object.keys(s.placements).every(id=>s.buildings.some(b=>b.id===id))&&rotations(s.rotations)&&
  (s.layoutUndo==null||(validPlacements(s.layoutUndo.placements)&&Object.keys(s.layoutUndo.placements).every(id=>s.buildings.some(b=>b.id===id))&&rotations(s.layoutUndo.rotations)))&&
+ (s.notes===undefined||validNotes(s.notes))&&
  Array.isArray(s.projects)&&s.projects.every(p=>typeof p==='string'&&p.trim()&&p.length<=40)&&
  Array.isArray(s.tasks)&&s.tasks.every(t=>t&&typeof t.id==='string'&&typeof t.title==='string'&&typeof t.project==='string'&&typeof t.done==='boolean'&&typeof t.notes==='string'&&typeof t.today==='string'&&Array.isArray(t.steps)&&t.steps.every(x=>x&&typeof x.id==='string'&&typeof x.title==='string'&&typeof x.done==='boolean'))&&
  Array.isArray(s.history)&&s.history.every(h=>h&&Number.isFinite(h.at)&&typeof h.taskId==='string'&&positive(h.minutes)&&(h.note===undefined||typeof h.note==='string')&&(h.nextStep===undefined||typeof h.nextStep==='string')&&(h.outcome===undefined||['finished','progress','continue'].includes(h.outcome)))&&

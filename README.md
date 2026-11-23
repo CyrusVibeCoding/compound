@@ -1,8 +1,8 @@
-# Little City · 0.9
+# Little City · 0.10
 
 A phone-first city built with real effort. Finish tasks, study, earn cash, place homes, and watch residents visit the park. White background, naturally colored models, transparent 3D canvas, and a permanently visible horizonless grid.
 
-**Play:** https://cyrusvibecoding.github.io/compound/?v=little-city-cafe-09
+**Play:** https://cyrusvibecoding.github.io/compound/?v=little-city-pages-10
 
 ![Basic house, big house, park, boy and girl models](models/city/preview.png)
 
@@ -75,7 +75,7 @@ Data stays in the browser. Export before changing devices or clearing storage. T
 
 ## Verification
 
-24 tests cover cash rewards/replay protection, study outcomes, purchases, failed drops, ownership/rotation/layout undo, finite rent accounting and backwards clocks, offline equivalence, resident routes, invalid backups, legacy migration/refunds, save isolation/recovery, reset rollback, import, and GLB size/joint/draw-call budgets.
+28 tests cover cash rewards/replay protection, study outcomes, purchases, failed drops, ownership/rotation/layout undo, finite rent accounting and backwards clocks, offline equivalence, resident routes, invalid backups, legacy migration/refunds, save isolation/recovery, reset rollback, import, and GLB size/joint/draw-call budgets.
 
 Mobile Chromium checks at 390 × 844 cover city model loading, resident totals, offline rent, actual tray drag purchases without text selection, task/study cash, the guide, calmer effects, migration, reset cancel/confirm, legacy import, and reload persistence. Physical iPhone 12/Safari gestures, Home Screen behavior, and frame rate remain unmeasured.
 
@@ -88,3 +88,13 @@ Header uses an opaque isolated compositor layer; navigation no longer uses a bac
 Run `CITY_ASSET=cafe blender -b --python scripts/build_city_models.py` to regenerate only the café. The café adds no rent, residents, upkeep, or new currency; its first price is $100 and follows the existing price increase.
 
 Café update validation: all 24 unit tests and the production build pass. Mobile Chromium at 390 × 844 checks the four-card tray, normal touch panning over a house, Edit-mode touch movement, undo, and café interactions. Physical iPhone Safari rendering still needs a device check.
+
+## Pages first version
+
+Pages adds searchable text notes with editable headings, paragraphs, bullet lists, and checklists. Blocks can be reordered. Pages optionally belong to a project; Projects is accessible from Pages. Archive and restore keep writing recoverable. Notes do not reward cash.
+
+Notes autosave after a short typing pause and on leaving; current notes are included in JSON exports/imports. Older backups migrate with an empty page collection. Reset clears pages too. Browser storage is finite; this version has no account or cross-device sync.
+
+The staged implementation plan is in [docs/pages-plan.md](docs/pages-plan.md). Calendar and task deadlines are planned next.
+
+Validation: 28 unit tests, production build, and mobile Chromium 390 × 844 checks for editing/reordering blocks, checklist state, body search, project filters, archive/restore, reload, project navigation, JSON export/import, and no horizontal overflow. Physical iPhone keyboard/Safari behavior still needs a device check.

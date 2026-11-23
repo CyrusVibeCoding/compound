@@ -1,9 +1,10 @@
 import React,{useEffect,useReducer,useState,useRef} from 'react';
 import {createRoot} from 'react-dom/client';
-import {House,Check,Plus,Map,ListTodo,Folder,Settings,Download,Upload,CheckCircle2,RotateCw,Users,Save} from 'lucide-react';
+import {House,Check,Plus,Map,ListTodo,Folder,Settings,Download,Upload,CheckCircle2,RotateCw,Users,Save,FileText} from 'lucide-react';
 import {type Kind} from './World';
 import City from './City';
 import Guide from './Guide';
+import Pages from './Pages';
 import {BUILDINGS,buildingCost,cityStats,advanceRent,amount,money} from './city.mjs';
 import {loadLocal,saveLocal,resetLocal} from './storage.mjs';
 import {useReducedEffects,type SceneEvent} from './effects';
@@ -17,13 +18,14 @@ function App(){
  const [sheet,setSheet]=useState<string|null>(null),[selectedId,setSelectedId]=useState<string|null>(null);
  const [title,setTitle]=useState(''),[project,setProject]=useState('Business'),[filter,setFilter]=useState<string|null>(null),[listFilter,setListFilter]=useState('today'),[newProject,setNewProject]=useState('');
  const [now,setNow]=useState(Date.now()),[toast,setToast]=useState(boot.source==='backup'?'Recovered local backup.':boot.migrated?'Your factory is now a city. Conversion details in Settings.':''),[storageError,setStorageError]=useState(false),[updateReady,setUpdateReady]=useState(false),[flight,setFlight]=useState<Flight>(null);
+ const [savedNotes,setSavedNotes]=useState(state.notes);
  const [savedAt,setSavedAt]=useState<number|null>(boot.at),latest=useRef(state);latest.current=state;
  const [sceneEvent,setSceneEvent]=useState<SceneEvent>(null);
  const reduced=useReducedEffects(state.calm);
  useEffect(()=>{if(!sceneEvent)return;const id=setTimeout(()=>setSceneEvent(null),1100);return()=>clearTimeout(id)},[sceneEvent]);
  useEffect(()=>{const updated=()=>setUpdateReady(true);window.addEventListener('compound-update',updated);return()=>window.removeEventListener('compound-update',updated)},[]);
- function persist(current=latest.current){let result;try{result=saveLocal(localStorage,current)}catch{result={ok:false,at:null}}setStorageError(!result.ok);if(result.ok)setSavedAt(result.at);return result.ok;}
- useEffect(()=>{persist(state)},[state]);
+ function persist(current=latest.current){let result;try{result=saveLocal(localStorage,current)}catch{result={ok:false,at:null}}setStorageError(!result.ok);if(result.ok){setSavedAt(result.at);setSavedNotes(current.notes)}return result.ok;}
+ useEffect(()=>{const id=setTimeout(()=>persist(state),350);return()=>clearTimeout(id)},[state]);
  useEffect(()=>{const flush=()=>{try{saveLocal(localStorage,latest.current)}catch{}};const hide=()=>{if(document.hidden)flush()};window.addEventListener('pagehide',flush);document.addEventListener('visibilitychange',hide);return()=>{window.removeEventListener('pagehide',flush);document.removeEventListener('visibilitychange',hide)}},[]);
  function manualSave(){const ok=persist();setToast(ok?'Saved on this phone.':'Could not save. Download a backup in Settings.');if(ok&&navigator.storage?.persist)navigator.storage.persist().catch(()=>{});}
  function resetProgress(){
@@ -66,14 +68,15 @@ function App(){
     {done>0&&<details className="completed"><summary>Completed · {done}</summary>{tasks.filter(t=>t.done).map(t=><div key={t.id}><CheckCircle2 size={17}/><span>{t.title}</span></div>)}</details>}
     {state.history.length>0&&<details className="completed"><summary>Focus history · {state.history.length}</summary>{state.history.slice(0,20).map((h:any,i:number)=><div className="history-item" key={`${h.at}-${i}`}><div><strong>{tasks.find(t=>t.id===h.taskId)?.title||'Focus session'}</strong><span>{h.minutes} min · {new Date(h.at).toLocaleDateString()} · {h.outcome||'progress'}</span>{h.note&&<p>{h.note}</p>}</div></div>)}</details>}
    </section>}
-   {tab==='projects'&&<section className="list-view"><span className="eyebrow">EFFORT ADDS UP</span><h1>Things worth building.</h1><p className="intro">Your work, with a place to grow.</p>
+   {tab==='pages'&&<Pages notes={state.notes} projects={projects} dispatch={dispatch} onProjects={()=>setTab('projects')} saved={!storageError&&savedNotes===state.notes} storageError={storageError}/>}
+   {tab==='projects'&&<section className="list-view"><button className="text-button" onClick={()=>setTab('pages')}>← Pages</button><span className="eyebrow">EFFORT ADDS UP</span><h1>Things worth building.</h1><p className="intro">Your work, with a place to grow.</p>
     <div className="stats"><div><strong>{done}</strong><span>tasks finished</span></div><div><strong>{state.minutes}</strong><span>focus minutes</span></div><div><strong>{amount(state.earned)}</strong><span>Cash from work</span></div></div>
     <form className="new-project" onSubmit={e=>{e.preventDefault();if(!newProject.trim())return;dispatch({type:'projectAdd',name:newProject});setNewProject('')}}><input aria-label="New project name" placeholder="New project…" value={newProject} maxLength={40} onChange={e=>setNewProject(e.target.value)}/><button className="icon-button" aria-label="Create project" disabled={!newProject.trim()}><Plus size={19}/></button></form>
     <div className="filters"><button className={filter===null?'active':''} onClick={()=>setFilter(null)}>All</button>{projects.map(p=><button key={p} className={filter===p?'active':''} onClick={()=>setFilter(p)}>{p}</button>)}</div>
     {projects.filter(p=>filter===null||filter===p).map(p=>{const ts=tasks.filter(t=>t.project===p),d=ts.filter(t=>t.done).length;return <div className="project-card" key={p}><div className="project-title"><Folder size={20}/><strong>{p}</strong><span>{d}/{ts.length}</span></div><div className="chapter-track"><i style={{width:`${ts.length?d/ts.length*100:0}%`}}/></div>{ts.filter(t=>!t.done).map(row)}{!ts.length&&<p>No tasks yet. Start with something small.</p>}<button className="text-button" onClick={()=>{setProject(p);setTab('today')}}><Plus size={16}/> Add a task</button></div>})}
    </section>}
   </main>
-  <nav aria-label="Main navigation">{[{id:'city',label:'City',Icon:Map},{id:'today',label:'Today',Icon:ListTodo},{id:'projects',label:'Projects',Icon:Folder}].map(({id,label,Icon})=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={20}/><span>{label}</span>{id==='today'&&today.length>0&&<i>{today.length}</i>}</button>)}</nav>
+  <nav aria-label="Main navigation">{[{id:'city',label:'City',Icon:Map},{id:'today',label:'Today',Icon:ListTodo},{id:'pages',label:'Pages',Icon:FileText}].map(({id,label,Icon})=><button key={id} className={tab===id||(id==='pages'&&tab==='projects')?'active':''} onClick={()=>setTab(id)}><Icon size={20}/><span>{label}</span>{id==='today'&&today.length>0&&<i>{today.length}</i>}</button>)}</nav>
   {sheet==='guide'&&<Guide close={()=>setSheet(null)} onToday={()=>{setSheet(null);setTab('today')}} onCity={()=>{setSheet(null);setTab('city')}}/>}
   {sheet==='settings'&&<Modal close={()=>setSheet(null)} label="Settings"><span className="eyebrow">YOUR CITY, SAVED HERE</span><h2>Settings</h2>
    <div className={`save-status ${storageError?'error':''}`} role="status"><Save size={19}/><div><strong>{storageError?'Local save unavailable':'Progress saved locally'}</strong><span>{savedAt?`Last saved ${new Date(savedAt).toLocaleTimeString()}`:'Your city and tasks stay in this browser.'}</span></div></div><button className="primary wide" onClick={manualSave}><Save size={17}/> Save on this phone</button>
@@ -83,7 +86,7 @@ function App(){
    <p className="help-note">Cash comes from tasks ($20), study ($2/min), and rent. Only placed homes earn rent: $2/hr per basic house, $6/hr per big house. Rent adds automatically while away. Parks and cafés are for visits, with no upkeep. No penalties for missing a day.</p>
    {state.legacyFactory&&<details className="migration-details"><summary>Your old save was kept</summary><p>Tasks, notes, projects, study history, and sessions are unchanged. Core → basic house; Press → big house; Assembler → park. IDs, positions and rotations stay the same. Old Matter, stored output and Charge became cash. Retired upgrades refunded {money(state.conversionCredit??0)}. The original factory snapshot remains inside exported backups.</p></details>}
    <p className="help-note">Autosaves after changes and on leaving. Export a backup before clearing browser data or switching devices. On iPhone: Safari → Share → Add to Home Screen.</p>
-   <div className="reset-progress"><strong>Start fresh</strong><p className="help-note">Delete tasks, notes, projects, cash, city, study history, and recovery saves on this device. Export a backup above to keep a copy.</p><button className="secondary wide" onClick={resetProgress}>Reset all progress</button></div><small>Little city · 0.9 · No account needed</small>
+   <div className="reset-progress"><strong>Start fresh</strong><p className="help-note">Delete tasks, notes, projects, cash, city, study history, and recovery saves on this device. Export a backup above to keep a copy.</p><button className="secondary wide" onClick={resetProgress}>Reset all progress</button></div><small>Little city · 0.10 · No account needed</small>
   </Modal>}
   {selectedBuilding&&sheet&&<Modal close={()=>setSheet(null)} label={BUILDINGS[buildingKind].name}><span className="eyebrow">YOUR NEIGHBORHOOD</span><h2>{BUILDINGS[buildingKind].name}</h2><p>{BUILDINGS[buildingKind].description}</p><div className="building-detail"><Users size={24}/><strong>{BUILDINGS[buildingKind].residents?`${BUILDINGS[buildingKind].residents} ${BUILDINGS[buildingKind].residents===1?'resident':'residents'} · ${money(BUILDINGS[buildingKind].rent)}/hour rent`:'A destination for your residents'}</strong></div><p className="help-note">{state.placements[sheet]?'Placed in your city.':'Stored in tray. Place it to bring it to life.'} {BUILDINGS[buildingKind].residents?'Rent is cash added automatically, including while away. Storing a home pauses its rent and removes its residents until placed again.':'Neighbors visit automatically. No resource bars or maintenance.'}</p>
   {state.placements[sheet]&&<div className="building-actions"><button className="secondary wide" onClick={()=>dispatch({type:'rotate',id:sheet})}><RotateCw size={17}/> Rotate 90°</button><button className="secondary wide" onClick={()=>{dispatch({type:'unplace',id:sheet});setSheet(null)}}>Return to tray</button></div>}</Modal>}
