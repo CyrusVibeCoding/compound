@@ -1,3 +1,4 @@
+import {isShop,isActivity} from './buildingKinds.mjs';
 import {streetPath} from './paths.mjs';
 
 /** @typedef {import('./World').Point} Point */
@@ -20,7 +21,7 @@ export function makeOuting(home, stops, obstacles,routeFor=(start,end)=>streetPa
   // A failed search returns only the start. Never sell at an unreachable destination.
   if(Math.hypot(end[0]-stop.point[0],end[2]-stop.point[2])>.36)continue;
   walk(route);at=end;
-  const duration=(stop.kind==='park'||stop.kind==='plaza')?7:14;
+  const duration=(isActivity(stop.kind))?7:14;
   segments.push({type:'visit',stop,point:at,start:time,end:time+duration});time+=duration;
  }
  const back=routeFor(at,home);
@@ -36,6 +37,6 @@ export function outingStops(destinations,index){
  if(!destinations.length)return [[]];
  return destinations.map((_,n)=>{
   const stop=destinations[(index+n)%destinations.length],park=parks[(index+n)%parks.length];
-  return (stop.kind==='cafe'||stop.kind==='bakery')&&park&&n%2===0?[stop,park]:[stop];
+  return (isShop(stop.kind))&&park&&n%2===0?[stop,park]:[stop];
  });
 }

@@ -1,6 +1,7 @@
+import {isShop,isActivity} from './buildingKinds.mjs';
 // Doorway travel and concealed indoor time; no interiors, physics, or extra payments.
 export function buildingVisitPose(kind,origin,rotation,elapsed,duration,out={x:0,y:0,z:0,inside:false,walking:false,doorOpen:false,facing:0},approach=/** @type {number[]|null} */(null)){
- const shop=kind==='cafe'||kind==='bakery',a=rotation*Math.PI/2,c=Math.cos(a),s=Math.sin(a);
+ const shop=isShop(kind),a=rotation*Math.PI/2,c=Math.cos(a),s=Math.sin(a);
  const path=shop?[[0,1, .025],[0,.68,.10],[.15,.18,.10],[.301,.10,.10]]:[[0,1,.025],[kind==='big-house'?.084:0,.46,.12]];
  if(approach){const dx=approach[0]-origin[0],dz=approach[2]-origin[2];path[0]=[c*dx-s*dz,s*dx+c*dz,approach[1]];}
  const lengths=[0];for(let i=1;i<path.length;i++)lengths.push(lengths[i-1]+Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]));
@@ -16,7 +17,7 @@ export function setDoorOpen(world,buildingId,resident,open){
 
 // Visibility is a pose property, never a latch left over from a previous segment.
 export function residentVisible(segment,time,placements,rotations,homeId,homeKind){
- const shop=segment.type==='visit'&&['cafe','bakery'].includes(segment.stop.kind);
+ const shop=segment.type==='visit'&&isShop(segment.stop.kind);
  if(segment.type!=='home'&&!shop)return true;
  const id=shop?segment.stop.id:homeId,kind=shop?segment.stop.kind:homeKind;
  return !buildingVisitPose(kind,placements[id],rotations[id]??0,time-segment.start,segment.end-segment.start,undefined,segment.point).inside;

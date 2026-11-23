@@ -72,7 +72,7 @@ function App(){
  const list=listFilter==='today'?today:listFilter==='overdue'?overdue:pending;
  function openPage(id:string){setOpenPageId(id);setSelectedId(null);setTab('pages')}
  const selectedBuilding=state.buildings.find((b:any)=>b.id===sheet),buildingKind=(selectedBuilding?.kind??'house') as Kind;
- const prices={house:buildingCost(state,'house'),'big-house':buildingCost(state,'big-house'),park:buildingCost(state,'park'),plaza:buildingCost(state,'plaza'),cafe:buildingCost(state,'cafe'),bakery:buildingCost(state,'bakery')};
+ const prices=Object.fromEntries(Object.keys(BUILDINGS).map(kind=>[kind,buildingCost(state,kind)])) as Record<import('./World').Kind,number>;
  function reward(kind:'collect'|'task'|'session',origin?:DOMRect){const target=document.querySelector('.cash')?.getBoundingClientRect(),from=origin??document.querySelector('.sheet')?.getBoundingClientRect();if(!target)return;const x=from?from.left+from.width/2:window.innerWidth/2,y=from?from.top+Math.min(from.height/2,100):window.innerHeight*.55;setFlight({id:performance.now(),kind,x,y,dx:target.left+target.width/2-x,dy:target.top+target.height/2-y})}
  function pulse(kind:'place',point:[number,number,number]){setSceneEvent({id:performance.now(),at:Date.now(),kind,point})}
  function complete(id:string,origin?:DOMRect){if(!state.tasks.some((t:Task)=>t.id===id&&!t.done))return;feedback.play('task',state);reward('task',origin);dispatch({type:'complete',id});setToast('+$20 · Task finished.');setSelectedId(null)}

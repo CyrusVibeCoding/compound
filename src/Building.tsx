@@ -12,6 +12,7 @@ export default function Building({id,kind,position,rotation=0,reduced,ghost=fals
  useFrame((_,dt)=>{
   if(!ghost&&!document.hidden){
    const active=!reduced&&!!activity?.shops.get(id),step=Math.min(dt,.1);
+   if(kind==='playground'&&!paused){for(const [name,spot] of [['SwingFront','front-bench'],['SwingBack','back-bench']]){const swing=model.copy.getObjectByName(name);if(swing){const visit=Array.from(activity?.visits.values()??[]).find(v=>v.buildingId===id&&v.spot?.id===spot);swing.rotation.x=!reduced&&visit?.swinging?Math.sin(visit.elapsed*2)*.12:0;}}}
    if(model.door&&!paused)model.door.rotation.y=THREE.MathUtils.damp(model.door.rotation.y,!reduced&&activity?.doors.get(id)?.size?-.95:0,9,step);
    if(model.window&&!paused){const m=model.window.material;m.emissiveIntensity=reduced?(evening?.3:0):THREE.MathUtils.damp(m.emissiveIntensity,active ? .65 : evening?.3:0,6,step);}
    if(reduced&&model.door)model.door.rotation.y=0;

@@ -1,4 +1,4 @@
-# Little City · 0.20
+# Little City · 0.22
 
 A phone-first city built with real effort. Finish tasks, study, earn cash, place homes, and watch residents visit the park. White background, naturally colored models, transparent 3D canvas, and a permanently visible horizonless grid.
 
@@ -211,3 +211,23 @@ Residents ease toward new headings along the shortest angle when walking, enteri
 Settings → Sound & touch has separate saved switches, initially off, and Try feedback. Lightweight synthesized cues mark completed tasks, valid building placement, and study completion while visible. No background ambience, shop-sale sounds, notifications, downloads, or changes to economy/routines. Audio unlocks through user interaction, suspends when hidden or disabled, and repeated cues are throttled. Touch uses the vibration API where available; iPhone Safari does not support custom vibration. Preferences join autosaves, JSON backups/imports, and reset; older saves remain accepted.
 
 Validation: 77 automated tests and production build. Headless 390×844 Chromium verified defaults, toggle persistence after reload, generated audio nodes for preview and task completion, no horizontal overflow and no page errors. Automated checks verify preference compatibility, missing APIs, hidden-page silence and throttling. Audible quality, physical vibration and iPhone Safari audio remain unverified.
+
+## Neighborhood expansion (0.22)
+
+Five buildings join the catalog with normal 20% repeat pricing, storage, rotation, undo, and backup support:
+
+| Building | Initial price | Activity |
+|---|---:|---|
+| Playground | $60 | Two exclusive gentle swings, a play tower and slide; free visits |
+| Library | $150 | Outdoor reading seats and a book table; free visits |
+| Flower shop | $80 | $3 eligible sales; takeaway bouquets |
+| Ice-cream stand | $70 | $2 eligible sales; takeaway cones |
+| Corner market | $130 | $4 eligible sales; takeaway grocery bags |
+
+Shop entry/exit, reacting windows, ten-minute shop and resident cooldowns, and visible-only payments reuse existing systems. Free destinations have no rent, income or upkeep. No new currencies or resource chains. Stable resident names and favorites stay unchanged. Routines/checkpoints include new destinations and carried items; elapsed catch-up never replays payments. Calmer effects keep timing while suppressing swings and props.
+
+Editable sources: models/city/{playground,library,flower-shop,ice-cream,market}.blend. Rebuild using `blender -b --python scripts/build_neighborhood_models.py`; CITY_ASSET optionally limits exports. Use scripts/render_shop.py for catalog thumbnails. Each runtime GLB remains below 250 KB and twelve meshes.
+
+Validation: 82 automated tests and production build, covering new ownership/save/undo, prices, cooldowns, rotation routes, exclusive activity spots, routine catch-up, doorway poses and asset budgets. Mobile Chromium at 390×844 verified 11 catalog items (5 shops, 4 free-visit places), visible residents, moving swings, shop doors and carried props, with no page errors or horizontal overflow. Physical iPhone Safari and real-device frame rate remain unverified.
+
+Production preview also verified a seated library reader and restores checkpoints before the first animation frame, protecting routine continuity during remounts.

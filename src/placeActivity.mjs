@@ -1,3 +1,4 @@
+import {isShop,isActivity} from './buildingKinds.mjs';
 // Transient activity only: no needs, extra payments, saved timers, or background simulation.
 export function activityWorld(){return {doors:new Map(),visits:new Map(),spots:new Map(),shops:new Map()};}
 export const PARK_SPOTS=[
@@ -6,12 +7,12 @@ export const PARK_SPOTS=[
  {id:'fountain',x:.5,z:0,y:.165,facing:-Math.PI/2,seated:false,via:[]},
 ];
 export const PLAZA_SPOTS=PARK_SPOTS.map(s=>s.id==='fountain'?{...s,id:'planter'}:{...s});
-export const placeSpots=kind=>kind==='plaza'?PLAZA_SPOTS:PARK_SPOTS;
+export const placeSpots=kind=>kind==='plaza'?PLAZA_SPOTS:kind==='playground'?PARK_SPOTS.slice(0,2):PARK_SPOTS;
 export function releaseVisit(world,resident){
  const visit=world.visits.get(resident);if(!visit)return;
  const door=world.doors.get(visit.buildingId);if(door){door.delete(resident);if(!door.size)world.doors.delete(visit.buildingId);}
  if(visit.spot)world.spots.delete(`${visit.buildingId}:${visit.spot.id}`);
- if(visit.kind==='cafe'||visit.kind==='bakery'){
+ if(isShop(visit.kind)){
   const count=(world.shops.get(visit.buildingId)??1)-1;
   if(count>0)world.shops.set(visit.buildingId,count);else world.shops.delete(visit.buildingId);
  }
@@ -21,14 +22,14 @@ export function beginVisit(world,resident,buildingId,kind,index=0){
  const current=world.visits.get(resident);if(current?.buildingId===buildingId)return current;
  releaseVisit(world,resident);
  let spot=null;
- if(kind==='park'||kind==='plaza'){
+ if(isActivity(kind)){
   const spots=placeSpots(kind);
   for(let n=0;n<spots.length;n++){const candidate=spots[(index+n)%spots.length];if(!world.spots.has(`${buildingId}:${candidate.id}`)){spot=candidate;break;}}
   if(!spot)return null; // A full park is simply passed by; nobody waits in a queue.
   world.spots.set(`${buildingId}:${spot.id}`,resident);
  }
  const visit={buildingId,kind,spot,elapsed:0};world.visits.set(resident,visit);
- if(kind==='cafe'||kind==='bakery')world.shops.set(buildingId,(world.shops.get(buildingId)??0)+1);
+ if(isShop(kind))world.shops.set(buildingId,(world.shops.get(buildingId)??0)+1);
  return visit;
 }
 

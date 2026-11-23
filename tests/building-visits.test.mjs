@@ -2,7 +2,7 @@ import {test} from 'node:test';import assert from 'node:assert/strict';
 import {buildingVisitPose,setDoorOpen} from '../src/buildingVisits.mjs';
 import {activityWorld,beginVisit,releaseVisit} from '../src/placeActivity.mjs';
 test('residents cross rotated doorways, disappear inside, and return to their exact route endpoint',()=>{
- for(const kind of ['house','big-house','cafe','bakery'])for(let r=0;r<4;r++){
+ for(const kind of ['house','big-house','cafe','bakery','flower-shop','ice-cream','market'])for(let r=0;r<4;r++){
   const a=r*Math.PI/2,origin=[3,0,2],approach=[3+Math.sin(a),.025,2+Math.cos(a)],duration=kind.includes('house')?12:14;
   const start=buildingVisitPose(kind,origin,r,0,duration,undefined,approach),inside=buildingVisitPose(kind,origin,r,duration/2,duration,undefined,approach),end=buildingVisitPose(kind,origin,r,duration,duration,undefined,approach);
   assert.ok(start.walking&&start.doorOpen&&!start.inside);assert.ok(inside.inside&&!inside.doorOpen);assert.ok(end.walking&&!end.inside);

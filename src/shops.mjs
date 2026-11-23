@@ -1,7 +1,7 @@
 import {BUILDINGS} from './city.mjs';
 // Each shop and each resident can make one paid purchase per ten minutes.
 export const SALE_INTERVAL=10*60*1000;
-export const SALE_AMOUNTS={cafe:4,bakery:3};
+export const SALE_AMOUNTS={cafe:4,bakery:3,'flower-shop':3,'ice-cream':2,market:4};
 export function validCommerce(value){return value&&typeof value==='object'&&!Array.isArray(value)&&['shops','residents'].every(key=>value[key]&&typeof value[key]==='object'&&!Array.isArray(value[key])&&Object.values(value[key]).every(t=>Number.isFinite(t)&&t>=0));}
 export function shopPurchase(state,{shopId,homeId,resident,now}){
  const shop=state.buildings.find(b=>b.id===shopId),home=state.buildings.find(b=>b.id===homeId);

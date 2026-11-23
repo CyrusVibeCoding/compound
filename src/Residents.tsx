@@ -1,5 +1,6 @@
+import {isShop,isActivity} from './buildingKinds.mjs';
 import {turnTowards} from './turning.mjs';
-import {useMemo,useRef,useEffect} from 'react';
+import {useMemo,useRef,useEffect,useLayoutEffect} from 'react';
 import {useFrame} from '@react-three/fiber';
 import {useGLTF} from '@react-three/drei';
 import * as THREE from 'three';
@@ -28,7 +29,7 @@ const bagMaterial=new THREE.MeshStandardMaterial({color:'#bc8753'});
 function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,people,activity,parkRotations,placements,homeKind,homeFacing}:{placements:Record<string,Point>,homeKind:string,people:People,activity:ReturnType<typeof activityWorld>,parkRotations:Record<string,number>,world:ReturnType<typeof greetingWorld>,homeFacing:number,outings:Outing[],homeId:string,resident:number,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,index:number,reduced:boolean}){
  const identity=useMemo(()=>residentProfile(homeId,resident),[homeId,resident]);
  const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${identity.avatar}.glb?v=color-08`);
- const root=useRef<THREE.Group>(null),cup=useRef<THREE.Group>(null),bag=useRef<THREE.Group>(null);
+ const root=useRef<THREE.Group>(null),cup=useRef<THREE.Group>(null),bag=useRef<THREE.Group>(null),flowers=useRef<THREE.Group>(null),cone=useRef<THREE.Group>(null),book=useRef<THREE.Group>(null);
  const facingReady=useRef(false);
  const entryPose=useRef({x:0,y:0,z:0,inside:false,walking:false,doorOpen:false,facing:0});
  const actor=useMemo<Neighbor>(()=>({x:0,z:0,walking:false,readyAt:world.time+8+index*.4,greeting:null}),[world,index]);
@@ -40,9 +41,9 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
  useEffect(()=>{park.current=null;releaseVisit(activity,visitor);return()=>{releaseVisit(activity,visitor)}},[activity,visitor,outings,reduced]);
  const layout=useMemo(()=>routineLayout(outings),[outings]);
  const pendingPark=useRef(0),lastAt=useRef(Date.now());
- const parkDuration=(stop:Stop)=>reduced?7:parkActivity(stop.point,parkRotations[stop.id]??0,placeSpots(stop.kind)[index%3]).duration;
+ const parkDuration=(stop:Stop)=>reduced?7:parkActivity(stop.point,parkRotations[stop.id]??0,placeSpots(stop.kind)[index%placeSpots(stop.kind).length]).duration;
  const clock=useRef({trip:0,segment:0,time:-index*.35,phase:index*2,carrying:''});
- useEffect(()=>{
+ useLayoutEffect(()=>{
   const saved=savedRoutine(visitor,layout),at=Date.now();
   const next=saved?advanceRoutine(outings,saved,Math.max(0,at-saved.at)/1000,parkDuration):{trip:0,segment:outings[0].segments.length-1,time:outings[0].segments.at(-1)!.start+3+(index%3)*.8,carrying:'',parkElapsed:0};
   clock.current={...next,phase:index*2};pendingPark.current=next.parkElapsed;lastAt.current=at;
@@ -56,17 +57,20 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   const c=clock.current;
   if(gap>.5){
    const active=activity.visits.get(visitor);
-   const next=advanceRoutine(outings,{...c,parkElapsed:(active?.kind==='park'||active?.kind==='plaza')?active.elapsed:pendingPark.current},gap,parkDuration);
+   const next=advanceRoutine(outings,{...c,parkElapsed:(isActivity(active?.kind))?active.elapsed:pendingPark.current},gap,parkDuration);
    Object.assign(c,next);pendingPark.current=next.parkElapsed;releaseVisit(activity,visitor);park.current=null;actor.greeting=null;handle.tapRemaining=0;
   }
   // Derive visibility on every frame, including restored/caught-up segments.
   const currentSegment=outings[c.trip%outings.length].segments[c.segment];
   g.visible=residentVisible(currentSegment,c.time,placements,parkRotations,homeId,homeKind);
   lastAt.current=at;
-  rememberRoutine(visitor,{layout,trip:c.trip,segment:c.segment,time:Math.max(0,c.time),carrying:c.carrying,parkElapsed:['park','plaza'].includes(activity.visits.get(visitor)?.kind)?activity.visits.get(visitor).elapsed:pendingPark.current,at});
+  rememberRoutine(visitor,{layout,trip:c.trip,segment:c.segment,time:Math.max(0,c.time),carrying:c.carrying,parkElapsed:isActivity(activity.visits.get(visitor)?.kind)?activity.visits.get(visitor).elapsed:pendingPark.current,at});
+  if(flowers.current)flowers.current.visible=!reduced&&c.carrying==='flower-shop';
+  if(cone.current)cone.current.visible=!reduced&&c.carrying==='ice-cream';
+  if(book.current)book.current.visible=false;
   const dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
   if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
-  if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
+  if(bag.current)bag.current.visible=!reduced&&['bakery','market'].includes(c.carrying);
   if(handle.tapRemaining>0&&g.visible){
    handle.tapRemaining=Math.max(0,handle.tapRemaining-dt);
    if(!reduced&&!park.current){
@@ -87,7 +91,7 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
    g.visible=true;
   if(segment.type==='visit'){
     const stop=segment.stop as Stop;
-    if((stop.kind==='cafe'||stop.kind==='bakery')&&onVisit(stop.id,homeId,resident))c.carrying=stop.kind;
+    if((isShop(stop.kind))&&onVisit(stop.id,homeId,resident))c.carrying=stop.kind;
    }
    if(c.segment===outing.segments.length-1){c.trip++;c.segment=0;c.time=0;c.carrying='';}
    else c.segment++;
@@ -95,14 +99,19 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   }
   if(segment.type==='visit'){
    const stop=segment.stop;
-   if((stop.kind==='park'||stop.kind==='plaza')&&!reduced){
+   if((isActivity(stop.kind))&&!reduced){
     const visit=beginVisit(activity,visitor,stop.id,stop.kind,index);
     actor.walking=false;
     if(!visit){c.time=segment.end;return;}
     if(!park.current){park.current=parkActivity(stop.point,parkRotations[stop.id]??0,visit.spot);visit.elapsed=Math.min(pendingPark.current,park.current.duration);pendingPark.current=0;}
     visit.elapsed+=dt;c.time=segment.start;
     const p=parkPose(park.current,visit.elapsed,pose.current);
+    if(book.current)book.current.visible=stop.kind==='library'&&p.seated;
+    visit.swinging=stop.kind==='playground'&&p.seated;
+    if(stop.kind==='playground'&&p.seated){const angle=Math.sin(visit.elapsed*2)*.12,a=(parkRotations[stop.id]??0)*Math.PI/2,dz=-.609*Math.sin(angle);p.x+=Math.sin(a)*dz;p.z+=Math.cos(a)*dz;p.y+=.609*(1-Math.cos(angle));}
     handle.status=p.walking?`Strolling through ${stop.kind==='plaza'?'the plaza':'the park'}`:p.seated?'Resting on a bench':stop.kind==='plaza'?'Relaxing by the planter':'Enjoying the fountain';
+    if(stop.kind==='library')handle.status=p.walking?'Walking through the reading terrace':p.seated?'Reading at the library':'Browsing the outdoor books';
+    if(stop.kind==='playground')handle.status=p.seated?'Enjoying a swing':'Walking through the playground';
     actor.walking=stop.kind==='plaza'&&!p.walking;actor.socialPlace=stop.kind==='plaza'?stop.id:undefined;
     if(actor.greeting&&stop.kind==='plaza')handle.status='Greeting a neighbor in the plaza';
     g.position.set(p.x,p.y,p.z);face(p.facing);actor.x=p.x;actor.z=p.z;
@@ -111,9 +120,9 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
     if(visit.elapsed>=park.current.duration){releaseVisit(activity,visitor);park.current=null;c.time=segment.end;}
     return;
    }
-   if(stop.kind==='cafe'||stop.kind==='bakery')beginVisit(activity,visitor,stop.id,stop.kind,index);
+   if(isShop(stop.kind))beginVisit(activity,visitor,stop.id,stop.kind,index);
   }
-  if(segment.type==='visit')handle.status=`${['park','plaza'].includes(segment.stop.kind)?'Visiting':'Browsing'} ${FAVORITES[segment.stop.kind as keyof typeof FAVORITES]??'the neighborhood'}`;
+  if(segment.type==='visit')handle.status=`${isActivity(segment.stop.kind)?'Visiting':'Browsing'} ${FAVORITES[segment.stop.kind as keyof typeof FAVORITES]??'the neighborhood'}`;
   else if(segment.type==='home')handle.status='At home';
   else {const next=outings[c.trip%outings.length].segments[c.segment+1];handle.status=next?.type==='visit'?`Heading to ${FAVORITES[next.stop.kind as keyof typeof FAVORITES]??'the neighborhood'}`:'Heading home';}
   actor.socialPlace=undefined;
@@ -129,14 +138,14 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
    if(segment.type==='visit')face(segment.stop.facing);
    if(segment.type==='home'){c.carrying='';face(homeFacing);}
   }
-  const isShop=segment.type==='visit'&&(segment.stop.kind==='cafe'||segment.stop.kind==='bakery');
-  if(segment.type==='home'||isShop){
+  const shopping=segment.type==='visit'&&isShop(segment.stop.kind);
+  if(segment.type==='home'||shopping){
    const id=segment.type==='visit'?segment.stop.id:homeId,kind=segment.type==='visit'?segment.stop.kind:homeKind;
    if(segment.type==='home')beginVisit(activity,visitor,id,'home',index);
    const p=buildingVisitPose(kind,placements[id],parkRotations[id]??0,c.time-segment.start,segment.end-segment.start,entryPose.current,'point' in segment?segment.point:null);
    setDoorOpen(activity,id,visitor,!reduced&&p.doorOpen);
    g.visible=!p.inside;actor.walking=false;actor.socialPlace=undefined;actor.greeting=null;
-   handle.status=p.inside?(isShop?`Inside ${FAVORITES[kind as keyof typeof FAVORITES]}`:'At home'):p.doorOpen?(c.time-segment.start<3?'Going inside':'Stepping outside'):'At home';
+   handle.status=p.inside?(shopping?`Inside ${FAVORITES[kind as keyof typeof FAVORITES]}`:'At home'):p.doorOpen?(c.time-segment.start<3?'Going inside':'Stepping outside'):'At home';
    if(!reduced){g.position.set(p.x,p.y,p.z);face(p.facing);}
    model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=!reduced&&p.walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
    return;
@@ -145,12 +154,15 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   actor.x=g.position.x;actor.z=g.position.z;
   actor.walking=!reduced&&walking&&c.time-segment.start>1&&segment.end-c.time>1;
   if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
-  if(bag.current)bag.current.visible=!reduced&&c.carrying==='bakery';
+  if(bag.current)bag.current.visible=!reduced&&['bakery','market'].includes(c.carrying);
   model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=reduced?0:j===3&&c.carrying?-.65:walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
  });
  return <group name={`resident-${homeId}-${resident}`} ref={root} scale={.32} raycast={noRaycast}>
   <primitive object={model.copy}/>
   <group ref={cup} visible={false} position={[.25,.74,.23]}><mesh geometry={cupGeometry} material={cupMaterial} raycast={noRaycast}/><mesh position={[0,.16,0]} geometry={lidGeometry} material={lidMaterial} raycast={noRaycast}/></group>
+  <group ref={flowers} visible={false} position={[.25,.7,.2]}><mesh material={bagMaterial}><coneGeometry args={[.15,.3,6]}/></mesh>{[-.08,.08,0].map((x,i)=><mesh key={i} position={[x,.19,i*.04]}><sphereGeometry args={[.09,6,4]}/><meshStandardMaterial color={i%2?'#efd58a':'#db8c9b'}/></mesh>)}</group>
+  <group ref={cone} visible={false} position={[.25,.8,.2]}><mesh rotation={[Math.PI,0,0]} material={bagMaterial}><coneGeometry args={[.1,.23,6]}/></mesh><mesh position={[0,.14,0]}><sphereGeometry args={[.13,8,6]}/><meshStandardMaterial color="#efa7af"/></mesh></group>
+  <group ref={book} visible={false} position={[0,.52,.3]}><mesh><boxGeometry args={[.42,.05,.3]}/><meshStandardMaterial color="#f3dfbb"/></mesh></group>
   <group ref={bag} visible={false} position={[.25,.55,.23]}><mesh geometry={bagGeometry} material={bagMaterial} raycast={noRaycast}/></group>
  </group>;
 }
