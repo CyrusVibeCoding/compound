@@ -1,13 +1,14 @@
 import { Suspense, useEffect, useRef, Component, type ReactNode, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Html, Grid } from '@react-three/drei';
+import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import Machine from './Machine';
+import Invention,{buildPoint,type InventionState} from './Invention';
 import {Transport,Halo,SceneBurst} from './SceneEffects';
 import type {SceneEvent} from './effects';
 export type Kind='core'|'press'|'assembler';
 export type Point=[number,number,number];
-export type MachineInstance={id:string,kind:Kind};
+export type MachineInstance={id:string,kind:Kind,level?:number};
 export type Placements=Record<string,Point>;
 export type WorldApi={project:(x:number,y:number)=>Point|null};
 export type Preview={id:string,kind:Kind,point:Point,valid:boolean}|null;
@@ -19,19 +20,21 @@ function EditorCamera({controls,reset,api,placements}:{controls:RefObject<any>,r
  useEffect(()=>{api.current={project:(x,y)=>{const r=gl.domElement.getBoundingClientRect();if(x<r.left||x>r.right||y<r.top||y>r.bottom)return null;const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1),camera);const point=new THREE.Vector3();return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),point)?[point.x,0,point.z]:null;}};return()=>{api.current=null}},[api,camera,gl]);
  return null;
 }
-export default function World({levels,machines,placements,rotations,reset,api,preview,dragging,editing,powered,onGround,handlers,reduced,look,event,selection}:{levels:Record<Kind,number>,machines:MachineInstance[],placements:Placements,rotations:Record<string,number>,reset:number,api:RefObject<WorldApi|null>,preview:Preview,dragging:boolean,editing:boolean,powered:boolean,onGround:(x:number,y:number)=>void,handlers:DragHandlers,reduced:boolean,look:string,event:SceneEvent,selection:string|null}){
+export default function World({levels,machines,placements,rotations,reset,api,preview,dragging,editing,powered,onGround,handlers,reduced,look,event,selection,invention,onBuild}:{invention:InventionState,onBuild:()=>void,levels:Record<Kind,number>,machines:MachineInstance[],placements:Placements,rotations:Record<string,number>,reset:number,api:RefObject<WorldApi|null>,preview:Preview,dragging:boolean,editing:boolean,powered:boolean,onGround:(x:number,y:number)=>void,handlers:DragHandlers,reduced:boolean,look:string,event:SceneEvent,selection:string|null}){
  const controls=useRef<any>(null);
+ const showBuild=(invention.active||invention.work>0)&&!invention.hidden,point=buildPoint(placements),cameraPlacements=showBuild?{...placements,observatory:point}:placements;
  const wrappedHandlers={...handlers,start:(id:string,e:PointerEvent)=>{if(e.button!==0)return;if(controls.current)controls.current.enabled=false;handlers.start(id,e)}};
  return <Boundary><Canvas orthographic shadows dpr={[1,1.5]} camera={{position:[7,8,11],zoom:40}} gl={{antialias:true,powerPreference:'low-power',alpha:true}} onCreated={({gl})=>gl.setClearColor('#ffffff',0)} onPointerMissed={e=>onGround(e.clientX,e.clientY)}>
   <ambientLight intensity={1.8}/><directionalLight position={[3,8,5]} intensity={3} castShadow shadow-mapSize={[1024,1024]} shadow-camera-left={-16} shadow-camera-right={16} shadow-camera-top={16} shadow-camera-bottom={-16} shadow-bias={-.001}/>
   <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.015,0]} receiveShadow onClick={e=>{e.stopPropagation();onGround(e.nativeEvent.clientX,e.nativeEvent.clientY)}}><planeGeometry args={[200,200]}/><shadowMaterial transparent opacity={.12}/></mesh>
   <Grid position={[0,-.008,0]} args={[200,200]} infiniteGrid followCamera cellSize={.5} sectionSize={2} cellThickness={editing ? .65 : .5} sectionThickness={.7} cellColor="#e8eaec" sectionColor="#dde1e4" fadeDistance={200} fadeStrength={1} raycast={()=>{}}/>
-  <Suspense fallback={<Html center><span className="loading-world">Loading objects…</span></Html>}>
-   {machines.filter(m=>placements[m.id]).map(m=><Machine key={m.id} id={m.id} kind={m.kind} level={levels[m.kind]} position={placements[m.id]} rotation={rotations[m.id]} handlers={wrappedHandlers} reduced={reduced} powered={powered} look={look}/>)}
-   {preview&&<><Machine id={preview.id} kind={preview.kind} level={Math.max(1,levels[preview.kind])} position={preview.point} rotation={rotations[preview.id]} reduced ghost look={look}/><mesh rotation={[-Math.PI/2,0,0]} position={[preview.point[0],.01,preview.point[2]]}><ringGeometry args={[1,1.025,48]}/><meshBasicMaterial color={preview.valid?'#96999c':'#333333'}/></mesh>{!preview.valid&&<group position={preview.point}>{[-1,1].map(n=><mesh key={n} rotation={[-Math.PI/2,0,n*Math.PI/4]} position={[0,.02,0]}><planeGeometry args={[.5,.04]}/><meshBasicMaterial color="#333"/></mesh>)}</group>}</>}
+  <Suspense fallback={null}>
+   {machines.filter(m=>placements[m.id]).map(m=><Machine key={m.id} id={m.id} kind={m.kind} level={m.level??levels[m.kind]} position={placements[m.id]} rotation={rotations[m.id]} handlers={wrappedHandlers} reduced={reduced} powered={powered} look={look}/>)}
+   {preview&&<><Machine id={preview.id} kind={preview.kind} level={machines.find(m=>m.id===preview.id)?.level??1} position={preview.point} rotation={rotations[preview.id]} reduced ghost look={look}/><mesh rotation={[-Math.PI/2,0,0]} position={[preview.point[0],.01,preview.point[2]]}><ringGeometry args={[1,1.025,48]}/><meshBasicMaterial color={preview.valid?'#96999c':'#333333'}/></mesh>{!preview.valid&&<group position={preview.point}>{[-1,1].map(n=><mesh key={n} rotation={[-Math.PI/2,0,n*Math.PI/4]} position={[0,.02,0]}><planeGeometry args={[.5,.04]}/><meshBasicMaterial color="#333"/></mesh>)}</group>}</>}
   </Suspense>
+  {showBuild&&<Invention state={invention} point={point} reduced={reduced} onOpen={onBuild}/>}
   <Transport machines={machines} placements={placements} running={powered} reduced={reduced}/>{selection&&placements[selection]&&<Halo point={placements[selection]!} reduced={reduced}/>}<SceneBurst event={event} reduced={reduced}/>
   <OrbitControls ref={controls} makeDefault target={[0,.55,0]} enabled={!dragging} enableRotate={false} enableDamping={!reduced} minZoom={8} maxZoom={150} maxPolarAngle={Math.PI/2.2} touches={{ONE:THREE.TOUCH.PAN,TWO:THREE.TOUCH.DOLLY_PAN}} mouseButtons={{LEFT:THREE.MOUSE.PAN,MIDDLE:THREE.MOUSE.DOLLY,RIGHT:THREE.MOUSE.PAN}}/>
-  <EditorCamera controls={controls} reset={reset} api={api} placements={placements}/>
+  <EditorCamera controls={controls} reset={reset} api={api} placements={cameraPlacements}/>
  </Canvas></Boundary>;
 }

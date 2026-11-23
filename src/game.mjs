@@ -6,7 +6,7 @@ export const DEFAULT_PROJECTS=['Business','School','Personal'];
 export const INITIAL={version:1,matter:0,earned:0,minutes:0,tasks:[],levels:{core:1,press:0,assembler:0},session:null,history:[],placements:{}};
 export function dayKey(now=Date.now()){const d=new Date(now);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 export function migrate(state,now=Date.now()){
- return {...state,machines:machinesFor(state),look:state.look??'porcelain',calm:state.calm??false,placements:placementsFor(state),rotations:state.rotations??{},layoutUndo:state.layoutUndo??null,projects:[...new Set([...DEFAULT_PROJECTS,...(state.projects??[]),...state.tasks.map(t=>t.project)])],factory:state.factory??{charge:0,stored:0,lastTick:now},tasks:state.tasks.map(t=>({...t,notes:t.notes??'',today:t.today??dayKey(now)}))};
+ return {...state,schemaRevision:2,invention:state.invention??{active:false,work:0,project:""},machines:machinesFor(state).map(m=>({...m,level:m.level??state.levels[m.kind]})),look:state.look??'porcelain',calm:state.calm??false,placements:placementsFor(state),rotations:state.rotations??{},layoutUndo:state.layoutUndo??null,projects:[...new Set([...DEFAULT_PROJECTS,...(state.projects??[]),...state.tasks.map(t=>t.project)])],factory:state.factory??{charge:0,stored:0,lastTick:now},tasks:state.tasks.map(t=>({...t,notes:t.notes??'',today:t.today??dayKey(now)}))};
 }
 export function cost(kind,level){return ({core:[0,40,100],press:[60,90,150],assembler:[120,160,240]})[kind]?.[level]??null;}
 export function remaining(session,now=Date.now()){return session?Math.max(0,session.duration*60000-(now-session.started)):0;}
@@ -21,6 +21,7 @@ export function reduce(original,action){
  const now=action.now??Date.now();let state=advance(migrate(original,now),now);
  switch(action.type){
  case 'tick':return state;
+ case 'build':return {...state,invention:{...state.invention,active:action.active===undefined?state.invention.active:!!action.active,hidden:action.hidden===undefined?state.invention.hidden:!!action.hidden,project:(action.project===''||state.projects.includes(action.project))?action.project:state.invention.project}};
  case 'setLook':return finishUnlocked(state,action.look)?{...state,look:action.look}:state;
  case 'setCalm':return {...state,calm:!!action.calm};
  case 'collect':return {...state,matter:state.matter+state.factory.stored,earned:state.earned+state.factory.stored,factory:{...state.factory,stored:0}};
@@ -31,7 +32,7 @@ export function reduce(original,action){
   const existing=machines.find(m=>m.id===id);if(existing&&existing.kind!==action.kind)return state;
   const point=snapPlacement(state.placements,id,action.point);if(!point)return state;
   const price=existing?0:newMachineCost(state,action.kind);if(!Number.isFinite(price)||state.matter<price)return state;
-  return {...state,matter:state.matter-price,machines:existing?machines:[...machines,{id,kind:action.kind}],levels:{...state.levels,[action.kind]:Math.max(1,state.levels[action.kind])},placements:{...state.placements,[id]:point},layoutUndo:undoFor(state)};
+  return {...state,matter:state.matter-price,machines:existing?machines:[...machines,{id,kind:action.kind,level:1}],levels:{...state.levels,[action.kind]:Math.max(1,state.levels[action.kind])},placements:{...state.placements,[id]:point},layoutUndo:undoFor(state)};
  }
  case 'unplace':{const id=action.id??action.kind;if(!state.placements[id])return state;const placements={...state.placements};delete placements[id];return {...state,placements,layoutUndo:undoFor(state)};}
  case 'rotate':{const id=action.id??action.kind;if(!state.placements[id])return state;return {...state,rotations:{...state.rotations,[id]:((state.rotations[id]??0)+1)%4},layoutUndo:undoFor(state)};}
@@ -43,7 +44,7 @@ export function reduce(original,action){
  case 'step':return {...state,tasks:state.tasks.map(t=>t.id===action.id?{...t,steps:[...t.steps,{id:action.stepId,title:action.title,done:false}]}:t)};
  case 'toggleStep':return {...state,tasks:state.tasks.map(t=>t.id===action.id?{...t,steps:t.steps.map(s=>s.id===action.stepId?{...s,done:!s.done}:s)}:t)};
  case 'complete':return complete(state,action.id);
- case 'upgrade':{if(!KINDS.includes(action.kind))return state;const level=state.levels[action.kind],price=cost(action.kind,level);if(price===null||state.matter<price)return state;return {...state,matter:state.matter-price,levels:{...state.levels,[action.kind]:level+1}};}
+ case 'upgrade':{const machine=state.machines.find(m=>m.id===action.id);if(!machine)return state;const price=cost(machine.kind,machine.level);if(price===null||state.matter<price)return state;const machines=state.machines.map(m=>m.id===machine.id?{...m,level:m.level+1}:m);return {...state,matter:state.matter-price,machines,levels:{...state.levels,[machine.kind]:Math.max(...machines.filter(m=>m.kind===machine.kind).map(m=>m.level))}};}
  case 'start':return state.session||![5,10,25].includes(action.duration)?state:{...state,session:{taskId:action.id,started:now,duration:action.duration}};
  case 'cancel':return {...state,session:null};
  case 'claim':return claim(state,now);
@@ -60,7 +61,7 @@ export function reduce(original,action){
 const finitePositive=n=>Number.isFinite(n)&&n>=0;
 const rotationValid=r=>r&&typeof r==='object'&&!Array.isArray(r)&&Object.entries(r).every(([k,v])=>validId(k)&&Number.isInteger(v)&&v>=0&&v<=3);
 export function validSave(s){
- return (s?.look===undefined||FINISHES.some(f=>f.id===s.look))&&(s?.calm===undefined||typeof s.calm==='boolean')&&s?.version===1&&finitePositive(s.matter)&&finitePositive(s.earned)&&finitePositive(s.minutes)&&
+ return (s?.schemaRevision===undefined||s.schemaRevision===2)&&(s?.invention===undefined||(!!s.invention&&typeof s.invention==='object'&&!Array.isArray(s.invention)&&(s.invention.hidden===undefined||typeof s.invention.hidden==='boolean')&&typeof s.invention.active==='boolean'&&finitePositive(s.invention.work)&&s.invention.work<=50&&typeof s.invention.project==='string'))&&(s?.look===undefined||FINISHES.some(f=>f.id===s.look))&&(s?.calm===undefined||typeof s.calm==='boolean')&&s?.version===1&&finitePositive(s.matter)&&finitePositive(s.earned)&&finitePositive(s.minutes)&&
  (s.machines===undefined||(validMachines(s.machines)&&s.machines.every(m=>s.levels?.[m.kind]>0)))&&(s.placements===undefined||(validPlacements(s.placements)&&Object.keys(s.placements).every(id=>machinesFor(s).some(m=>m.id===id))))&&(s.rotations===undefined||rotationValid(s.rotations))&&
  (s.factory===undefined||(finitePositive(s.factory?.charge)&&finitePositive(s.factory?.stored)&&Number.isFinite(s.factory?.lastTick)))&&
  (s.projects===undefined||(Array.isArray(s.projects)&&s.projects.every(p=>typeof p==='string'&&p.trim()&&p.length<=40)))&&

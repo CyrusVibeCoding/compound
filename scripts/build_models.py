@@ -50,6 +50,15 @@ for i in range(4):
  a=i*math.pi/2
  box('L3_Foot'+str(i),(.65*math.cos(a),.65*math.sin(a),.52),(.16,.16,.2),gray,.02)
 ring('L3_Crown',(0,0,2.55),.38,.03,dark)
+# Larger nested gimbal and crown change the silhouette at phone scale.
+for x in [-.8,.8]:
+ box('L2_Stabilizer'+str(x),(x,.3,1.15),(.18,.22,1.25),gray,.035)
+ring('L2_Drive',(0,0,1.72),.96,.065,white,(math.pi/2,.6,0))
+ring('L3_Gimbal',(0,0,1.72),1.03,.085,white,(.6,math.pi/2,0))
+for x in [-.55,.55]:
+ box('L3_CrownSupport'+str(x),(x,0,2.25),(.10,.15,.7),dark,.025)
+ring('L3_UpperCage',(0,0,2.5),.58,.09,white)
+cyl('L3_Cap',(0,0,2.62),.26,.18,gray)
 export('core')
 base()
 for x in [-.65,.65]:
@@ -63,6 +72,15 @@ box('Anvil',(0,0,.53),(1.1,.9,.25),white,.04)
 box('Material',(0,0,.75),(.43,.43,.2),gray,.035)
 for x in [-.45,.45]:cyl('L2_Auxiliary',(x,0,2.24),.12,.22,gray)
 box('L3_Feeder',(0,-.85,.6),(1.1,.65,.3),white)
+for x in [-.45,.45]:
+ cyl('L2_Actuator'+str(x),(x,0,1.67),.085,.58,dark)
+box('L2_DriveBox',(0,.62,1.45),(.9,.35,.75),gray)
+box('L3_FeedFrame',(0,-.68,.68),(1.5,.7,.2),dark)
+for i in range(5):
+ o=cyl('L3_Roller'+str(i),(0,-.4-i*.13,.82),.085,1.25,gray);o.rotation_euler.y=math.pi/2
+for x in [-.72,.72]:
+ box('L3_Housing'+str(x),(x,0,1.1),(.22,.9,1.35),white)
+box('L3_CrossDrive',(0,.12,2.42),(1.55,.6,.2),gray)
 export('press')
 base(); cyl('Turntable',(0,0,.49),.64,.23,dark); cyl('Arm base',(0,0,.7),.36,.3,white)
 box('ArmLower',(-.15,0,1.15),(.3,.32,.85),white)
@@ -74,5 +92,16 @@ for y in [-.14,.14]:box('Claw',(.75,y,1.22),(.16,.06,.23),gray,.015)
 box('Assembly block',(.75,0,.65),(.35,.35,.35),bright,.04)
 ring('L2_Track',(0,0,.72),.66,.035,gray)
 box('L3_Supply',(-.8,-.55,.65),(.4,.5,.5),white)
+for x in [-.8,.8]:
+ cyl('L2_Spool'+str(x),(x,.55,.6),.18,.35,gray)
+box('L2_Worktable',(.55,0,.62),(.8,.9,.16),white)
+# Second assembly arm: each level-three node can reveal independently.
+cyl('L3_ArmBase',(-.6,.55,.7),.25,.3,gray)
+box('L3_ArmLower',(-.6,.55,1.18),(.22,.25,.8),white)
+sphere('L3_Elbow',(-.6,.55,1.6),.2,dark)
+box('L3_ArmUpper',(-.2,.55,1.65),(.8,.2,.2),white)
+sphere('L3_Wrist',(.25,.55,1.65),.15,gray)
+box('L3_Tool',(.25,.55,1.35),(.12,.18,.5),dark)
+ring('L3_Cradle',(.6,0,.72),.48,.07,gray)
 export('assembler')
 print('Models exported')

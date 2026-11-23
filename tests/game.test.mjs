@@ -1,7 +1,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {INITIAL,reduce,remaining,validSave} from '../src/game.mjs';
 test('completed work rewards once',()=>{let s=reduce(INITIAL,{type:'add',id:'1',title:'Do work',project:'Business'});s=reduce(s,{type:'complete',id:'1'});assert.equal(s.matter,20);assert.equal(reduce(s,{type:'complete',id:'1'}).matter,20)});
 test('background time resolves without ticking and cannot claim early or twice',()=>{let s=reduce(INITIAL,{type:'start',id:'1',duration:5,now:1000});assert.equal(remaining(s.session,61000),240000);assert.equal(reduce(s,{type:'claim',now:61000}).matter,0);s=reduce(s,{type:'claim',now:301000});assert.equal(s.matter,10);assert.equal(s.minutes,5);assert.equal(reduce(s,{type:'claim',now:301001}).matter,10)});
-test('upgrades enforce affordability and cap',()=>{assert.equal(reduce(INITIAL,{type:'upgrade',kind:'core'}).levels.core,1);let s={...INITIAL,matter:1000};for(let i=0;i<5;i++)s=reduce(s,{type:'upgrade',kind:'core'});assert.equal(s.levels.core,3);assert.equal(s.matter,860)});
+test('upgrades enforce affordability and cap',()=>{assert.equal(reduce(INITIAL,{type:'upgrade',id:'core'}).levels.core,1);let s={...INITIAL,matter:1000};for(let i=0;i<5;i++)s=reduce(s,{type:'upgrade',id:'core'});assert.equal(s.levels.core,3);assert.equal(s.matter,860)});
 test('backup validation rejects corrupted state',()=>{assert.ok(validSave(INITIAL));assert.ok(!validSave({...INITIAL,matter:-1}));assert.ok(!validSave({...INITIAL,levels:{core:50}}));assert.ok(!validSave({...INITIAL,tasks:[{title:'bad'}]}))});
 
 import {placementsFor,snapPlacement} from '../src/placement.mjs';
