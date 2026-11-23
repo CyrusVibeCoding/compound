@@ -1,8 +1,8 @@
-# Compound · motion & milestones 0.4
+# Compound · pocket factory 0.5
 
 A phone-first, monochrome productivity game. Real work earns Matter and Charge. Charge powers the miniature farm you build.
 
-**Live app:** https://cyrusvibecoding.github.io/compound/?v=motion-milestones-04
+**Live app:** https://cyrusvibecoding.github.io/compound/?v=pocket-factory-05
 
 ![Blender machine preview](models/preview.png)
 
@@ -25,9 +25,17 @@ For iPhone, open the live HTTPS app in Safari and choose Share → Add to Home S
 
 - Drag objects from the tray or directly on the farm. Tap a placed object for upgrades, rotation, or returning it to the tray.
 - Tap a tray object then an open map space as an alternative to dragging.
-- Placement snaps to half-unit spacing and rejects overlaps. A temporary grid and ghost preview appear while editing.
+- Placement snaps to half-unit spacing and rejects overlaps. The infinite grid stays visible at all times. Ghost previews appear while editing; the 3D canvas has a transparent background over the white app.
 - Layout undo restores the previous placement/rotation without reversing purchases or production rewards. Machines remain owned after undo.
 - Pan empty space, pinch to zoom, or recenter to frame the saved layout.
+
+## Multiple machines and touch controls
+
+- Tray cards add machines. Drop stored machines for free; when no stored copy remains, dropping another buys a new copy at the displayed price. Invalid or cancelled drops never charge Matter.
+- Base extra-copy prices: Core 40, Press 60, Assembler 120 Matter. Prices grow by 35% per additional owned copy (the initial free Core is excluded from this growth).
+- Every copy has a persistent ID, position and rotation. Drag an existing machine directly on the farm to move it. Returning to the tray preserves ownership and rotation.
+- Type upgrades apply to all copies of that type; machine panels explicitly say “Upgrade all”. Layout undo preserves purchases and restores only the previous layout.
+- Farm, header and tray text cannot be selected or invoke native drag menus. Touch movement prevents browser scrolling during a machine drag. Notes and text fields retain normal editing and copy/paste.
 
 ## Motion and milestones
 
@@ -43,9 +51,9 @@ For iPhone, open the live HTTPS app in Safari and choose Share → Add to Home S
 - A completed 5/10/25-minute session earns **2 Matter +1 Charge per minute**.
 - Completing a task earns **20 Matter +5 Charge**, once. Partial work earns the session reward without marking the task done. Continue claims the completed round and starts a new one.
 - Charge rewards fill available tank capacity. Removing capacity does not delete existing Charge; no new Charge is added until space is available.
-- Core must be placed to produce. Its three levels store 30/60/90 Charge and yield 1/1.25/1.5 Matter per Charge.
-- A placed Press consumes Charge at 1.5/2/2.5 per minute, versus 1 without a Press. More speed produces Matter sooner rather than creating energy.
-- A placed Assembler auto-collects output, adds 30 Charge capacity per level, and adds 40 output capacity per level (base output capacity: 20).
+- At least one Core must be placed to produce. Each placed Core stores 30/60/90 Charge according to the shared Core level, with a minimum one-Core tank available while all Cores are stored. Matter yield is 1/1.25/1.5 per Charge.
+- Each placed Core contributes 1 Charge/min of processing. Each placed Press adds 0.5/1/1.5 Charge/min according to its level. For one Core and one Press this is 1.5/2/2.5 per minute. More speed produces Matter sooner rather than creating energy.
+- Any placed Assembler enables auto-collection. Each placed Assembler adds 30 Charge and 40 output capacity per level (base output capacity: 20).
 - Without auto-collection, output waits in storage. Full storage pauses production without consuming Charge. Tap Collect to bank it.
 - Production uses elapsed timestamps, catches up when reopened, and is capped by earned Charge and available output storage. Placing, removing or upgrading settles previous production before changing rates.
 
@@ -53,7 +61,7 @@ Tasks include editable titles, notes, subtasks, custom projects and an explicit 
 
 ## Data and updates
 
-Data stays in this device's `compound-v1` local-storage key. Older saves and exported backups migrate without resetting tasks, Matter, machine ownership, sessions or layout. Export backups in Settings before clearing browser data or switching devices. No sync or server database is configured.
+Data stays in this device/browser's `compound-v2` local-storage key. The old `compound-v1` key is read for migration and left untouched, so an old cached build cannot overwrite new multiple-machine progress. Old saves and exported backups retain tasks, Matter, ownership, sessions and layout. A Save icon and Settings show save status and last-saved time. Autosave runs after changes and flushes on page hide; `compound-v2-backup` retains the previous valid local snapshot and can recover a corrupt primary save. Export backups in Settings before clearing browser data or switching devices. No sync or server database is configured.
 
 Production builds cache the app and models for offline reopening. Navigation bypasses HTTP cache, updates are checked when returning to the app, and an update notice offers refresh without interrupting a work session. Versioned test links help open a fresh document.
 
@@ -70,6 +78,6 @@ The first command regenerates sources and exports. The second creates a showroom
 
 ## Verification and limits
 
-TypeScript, production build and 31 unit tests pass. Tests cover reward replay protection, capped online/offline production, storage, upgrades, capacity changes, placement accounting, layout undo, rotation, timer recovery, session outcomes, migration, backup validation, cosmetic gating and spring stability.
+TypeScript, production build and 44 unit tests pass. Tests cover reward replay protection, capped online/offline production, storage, upgrades, capacity changes, placement accounting, layout undo, rotation, timer recovery, session outcomes, migration, backup validation, cosmetic gating, spring stability, multiple-instance purchases, independent rotation, local save recovery, legacy storage isolation and storage failure reporting.
 
-Browser automation is unavailable in this environment. Physical iPhone 12 gestures, Safari Home Screen/offline behavior, visual animations and frame rate remain unverified. The design targets 60 fps; it has not been measured. Sound, prestige and more model families remain future work.
+The supplied iPhone video was reviewed: text-selection handles appeared on the Matter counter during dragging, and the grid vanished after dropping. Browser automation is unavailable in this environment. Physical iPhone 12 gestures, Safari Home Screen/offline behavior, visual animations and frame rate remain unverified. The design targets 60 fps; it has not been measured. Sound, prestige and more model families remain future work.
