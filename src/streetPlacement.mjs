@@ -4,7 +4,7 @@ function strip(a,b,width){const dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,d
 function shapes(kind,asphaltOnly){
  if(kind==='sidewalk')return [rect(0,0,.16,1)];
  if(kind.startsWith('parking-'))return [rect(0,0,kind==='parking-small'?.8:1,1)];
- if(kind==='road'||kind==='curved-road'){const path=transportPaths(kind).drive[0],width=asphaltOnly?.72:1.28;return path.slice(1).map((p,i)=>strip(path[i],p,width));}
+ if(kind==='road'||kind==='curved-road'){const path=transportPaths(kind).drive[0],width=asphaltOnly?.72:1.28;return path.slice(1).map((p,i)=>{const polygon=strip(path[i],p,width);if(kind==='curved-road'){if(i===0){polygon[0]=[path[0][0]-width/2,path[0][1]];polygon[3]=[path[0][0]+width/2,path[0][1]];}if(i===path.length-2){polygon[1]=[p[0],p[1]+width/2];polygon[2]=[p[0],p[1]-width/2];}}return polygon;});}
  return [rect(0,0,.81,.81)];
 }
 function overlaps(a,b){for(const polygon of [a,b])for(let i=0;i<polygon.length;i++){const p=polygon[i],q=polygon[(i+1)%polygon.length],axis=[p[1]-q[1],q[0]-p[0]],length=Math.hypot(...axis),project=poly=>poly.map(v=>(v[0]*axis[0]+v[1]*axis[1])/length),av=project(a),bv=project(b);if(Math.min(Math.max(...av),Math.max(...bv))-Math.max(Math.min(...av),Math.min(...bv))<=.025)return false;}return true;}

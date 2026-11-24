@@ -62,5 +62,5 @@ export function walkingNetwork(buildings,placements,rotations){
   for(const a of near(start))for(const b of near(end)){if(a.id===b.id)continue;const car=roads.route(a.point,b.point);if(!car)continue;const first=streetPath(start,a.point,obstacles),last=streetPath(b.point,end,obstacles);if(Math.hypot(first.at(-1)[0]-a.point[0],first.at(-1)[2]-a.point[2])>.1||Math.hypot(last.at(-1)[0]-end[0],last.at(-1)[2]-end[2])>.36)continue;return [{points:first,vehicle:false},{points:car,vehicle:true},{points:last,vehicle:false}];}return null;
  };
  Object.assign(route,{drive});
- return {placements,rotations,approaches,entrances,obstacles,edges:[...edges.values()],nodes:[...graph.keys()].map(point),route};
+ return {pavedPaths:roads.sidewalks,placements,rotations,approaches,entrances,obstacles,edges:[...edges.values()],nodes:[...graph.keys()].map(point),route};
 }

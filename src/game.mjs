@@ -43,11 +43,13 @@ export function reduce(original,action){
  case 'setFeedback':return ['sound','haptics'].includes(action.key)?{...state,[action.key]:!!action.enabled}:state;
  case 'setCalm':return {...state,calm:!!action.calm};
  case 'place':{
+  if(action.rotation!==undefined&&(!Number.isInteger(action.rotation)||action.rotation<0||action.rotation>3))return state;
+  const rotations=action.rotation===undefined?state.rotations:{...state.rotations,[action.id]:action.rotation};
   if(!Object.hasOwn(BUILDINGS,action.kind)||!validId(action.id))return state;
   const existing=state.buildings.find(m=>m.id===action.id);if(existing&&existing.kind!==action.kind)return state;
-  const point=snapPlacement(state.placements,action.id,action.point,state.buildings,state.rotations,action.kind);if(!point)return state;
+  const point=snapPlacement(state.placements,action.id,action.point,state.buildings,rotations,action.kind);if(!point)return state;
   const price=existing?0:buildingCost(state,action.kind);if(state.cash<price)return state;
-  return {...state,cash:state.cash-price,buildings:existing?state.buildings:[...state.buildings,{id:action.id,kind:action.kind}],placements:{...state.placements,[action.id]:point},layoutUndo:undoFor(state)};
+  return {...state,rotations,cash:state.cash-price,buildings:existing?state.buildings:[...state.buildings,{id:action.id,kind:action.kind}],placements:{...state.placements,[action.id]:point},layoutUndo:undoFor(state)};
  }
  case 'unplace':{if(!state.placements[action.id])return state;const placements={...state.placements};delete placements[action.id];return {...state,placements,layoutUndo:undoFor(state)};}
  case 'rotate':{if(!state.placements[action.id])return state;const rotations={...state.rotations,[action.id]:((state.rotations[action.id]??0)+1)%4};const building=state.buildings.find(b=>b.id===action.id);if(!building||!snapPlacement(state.placements,action.id,state.placements[action.id],state.buildings,rotations,building.kind))return state;return {...state,rotations,layoutUndo:undoFor(state)};}

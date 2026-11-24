@@ -1,3 +1,4 @@
+import {parkingRoadGuides} from './streetConnections.mjs';
 import { Suspense, useEffect, useRef, useMemo, useState, useCallback, Component, type ReactNode, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Html } from '@react-three/drei';
@@ -16,7 +17,7 @@ export type Point=[number,number,number];
 export type BuildingInstance={id:string,kind:Kind};
 export type Placements=Record<string,Point>;
 export type WorldApi={project:(x:number,y:number)=>Point|null};
-export type Preview={id:string,kind:Kind,point:Point,valid:boolean}|null;
+export type Preview={id:string,kind:Kind,point:Point,valid:boolean,rotation?:number}|null;
 export type DragHandlers={start:(id:string,e:PointerEvent)=>void,move:(e:PointerEvent)=>void,end:(e:PointerEvent)=>void,cancel:()=>void};
 class Boundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true}}render(){return this.state.failed?<div className="world-error">3D world unavailable.<br/>Tasks and progress still work.</div>:this.props.children}}
 function EditorCamera({controls,reset,api,placements}:{controls:RefObject<any>,reset:number,api:RefObject<WorldApi|null>,placements:Placements}){
@@ -26,6 +27,7 @@ function EditorCamera({controls,reset,api,placements}:{controls:RefObject<any>,r
  return null;
 }
 export default function World({buildings,placements,rotations,reset,api,preview,dragging,editing,canEdit,onGround,handlers,reduced,event,selection,onVisit,sales,paused,evening}:{evening:boolean,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,sales:{id:string,shopId:string,amount:number}[],paused:boolean,buildings:BuildingInstance[],placements:Placements,rotations:Record<string,number>,reset:number,api:RefObject<WorldApi|null>,preview:Preview,dragging:boolean,editing:boolean,canEdit:boolean,onGround:(x:number,y:number)=>void,handlers:DragHandlers,reduced:boolean,event:SceneEvent,selection:string|null}){
+ const roadGuides=useMemo(()=>canEdit?parkingRoadGuides(buildings,placements,rotations):[],[canEdit,buildings,placements,rotations]);
  const network=useMemo(()=>walkingNetwork(buildings,placements,rotations),[buildings,placements,rotations]);
  const activity=useMemo(()=>activityWorld(),[network]);
  const people=useMemo<People>(()=>new Map(),[network]);
@@ -42,7 +44,8 @@ export default function World({buildings,placements,rotations,reset,api,preview,
   <WalkingPaths network={network}/>
   <Suspense fallback={null}>
    {buildings.filter(m=>placements[m.id]).map(m=><Building key={m.id} id={m.id} kind={m.kind} position={placements[m.id]} rotation={rotations[m.id]} activity={activity} evening={evening} paused={paused||editing} handlers={canEdit?wrappedHandlers:undefined} reduced={reduced}/>)}
-   {preview&&<><Building id={preview.id} kind={preview.kind} position={preview.point} rotation={rotations[preview.id]} reduced ghost/><mesh rotation={[-Math.PI/2,0,0]} position={[preview.point[0],.01,preview.point[2]]}><ringGeometry args={[1,1.025,48]}/><meshBasicMaterial color={preview.valid?'#96999c':'#333333'}/></mesh>{!preview.valid&&<group position={preview.point}>{[-1,1].map(n=><mesh key={n} rotation={[-Math.PI/2,0,n*Math.PI/4]} position={[0,.02,0]}><planeGeometry args={[.5,.04]}/><meshBasicMaterial color="#333"/></mesh>)}</group>}</>}
+   {roadGuides.map((guide:{id:string,point:number[],rotation:number})=><group name={`parking-road-${guide.id}`} key={guide.id}><Building id={guide.id} kind="road" position={guide.point as Point} rotation={guide.rotation} reduced ghost ghostOpacity={.6}/></group>)}
+   {preview&&<><Building id={preview.id} kind={preview.kind} position={preview.point} rotation={preview.rotation??rotations[preview.id]} reduced ghost/><mesh rotation={[-Math.PI/2,0,0]} position={[preview.point[0],.01,preview.point[2]]}><ringGeometry args={[1,1.025,48]}/><meshBasicMaterial color={preview.valid?'#96999c':'#333333'}/></mesh>{!preview.valid&&<group position={preview.point}>{[-1,1].map(n=><mesh key={n} rotation={[-Math.PI/2,0,n*Math.PI/4]} position={[0,.02,0]}><planeGeometry args={[.5,.04]}/><meshBasicMaterial color="#333"/></mesh>)}</group>}</>}
   </Suspense>
   <Suspense fallback={null}><Residents people={people} onVisit={onVisit} paused={paused||editing} buildings={buildings} network={network} activity={activity} reduced={reduced}/></Suspense>{selection&&placements[selection]&&<Halo point={placements[selection]!} reduced={reduced}/>}<SceneBurst event={event} reduced={reduced}/>
   {sales.filter(s=>placements[s.shopId]).map(s=><Html key={s.id} position={[placements[s.shopId][0],2,placements[s.shopId][2]]} center style={{pointerEvents:'none'}}><span className={`shop-income ${reduced?'still':''}`} role="status">+${s.amount}</span></Html>)}
