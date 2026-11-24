@@ -1,4 +1,6 @@
 export const BUILDINGS={
+'sidewalk':{name:'Sidewalk',price:5,residents:0,rent:0,description:'A placeable walking path. Rotate to connect ends.'},'road':{name:'Road',price:10,residents:0,rent:0,description:'A straight road with sidewalks on both sides.'},'curved-road':{name:'Curved road',price:12,residents:0,rent:0,description:'A quarter-turn road with sidewalks on both sides.'},'parking-small':{name:'Small parking lot',price:25,residents:0,rent:0,description:'Two spaces and a place to start or end a car trip.'},'parking-big':{name:'Big parking lot',price:45,residents:0,rent:0,description:'Six spaces and a place to start or end a car trip.'},
+
  playground:{name:'Playground',price:60,residents:0,rent:0,description:'Two gentle swings and a play tower. Free visits, no upkeep.'},
  library:{name:'Library',price:150,residents:0,rent:0,description:'A quiet neighborhood library with outdoor reading seats. Free visits, no upkeep.'},
  'flower-shop':{name:'Flower shop',price:80,residents:0,rent:0,description:'Fresh flowers and bouquets to bring home. Sales earn $3, with the usual ten-minute cooldown.'},

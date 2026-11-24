@@ -19,3 +19,5 @@ test('both home models include a separately animated doorway',()=>{
 });
 
 test('playground preserves separate swing pivots',()=>{const bytes=readFileSync(new URL('../public/models/playground.glb',import.meta.url));const gltf=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)));for(const name of ['SwingFront','SwingBack'])assert.ok(gltf.nodes.some(n=>n.name===name&&n.children?.length));});
+
+test('street and car models retain the mobile asset budget',()=>{for(const name of ['road','curved-road','sidewalk','parking-small','parking-big','car']){const bytes=readFileSync(new URL(`../public/models/${name}.glb`,import.meta.url));const gltf=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)));assert.ok(bytes.length<250000);assert.ok(gltf.meshes.length<=12);}});

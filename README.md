@@ -1,4 +1,4 @@
-# Little City · 0.22
+# Little City · 0.23
 
 A phone-first city built with real effort. Finish tasks, study, earn cash, place homes, and watch residents visit the park. White background, naturally colored models, transparent 3D canvas, and a permanently visible horizonless grid.
 
@@ -231,3 +231,13 @@ Editable sources: models/city/{playground,library,flower-shop,ice-cream,market}.
 Validation: 82 automated tests and production build, covering new ownership/save/undo, prices, cooldowns, rotation routes, exclusive activity spots, routine catch-up, doorway poses and asset budgets. Mobile Chromium at 390×844 verified 11 catalog items (5 shops, 4 free-visit places), visible residents, moving swings, shop doors and carried props, with no page errors or horizontal overflow. Physical iPhone Safari and real-device frame rate remain unverified.
 
 Production preview also verified a seated library reader and restores checkpoints before the first animation frame, protecting routine continuity during remounts.
+
+## Placeable streets and resident car trips (0.23)
+
+Build → Streets adds Sidewalk ($5), Road ($10), Curved road ($12), Small parking lot ($25, two spaces), and Big parking lot ($45, six spaces). Normal repeat pricing, free stored placement, Edit rotation/movement, undo and JSON backups apply. Editable models are generated with scripts/build_street_models.py; each GLB stays below 250 KB and twelve meshes.
+
+Street pieces meet on a two-unit tile spacing. Straight and quarter-turn roads have pedestrian edges. Sidewalk pieces join the shared walking graph; road surfaces block ordinary pedestrian shortcuts. Existing buildings keep automatic walking access. Connect parking-lot entrances to a continuous road, rotating the destination lot to face the road. Residents within four units of different connected lots can walk to parking, ride a small car, then walk to their destination. Disconnected roads never invent car routes. Lots are not outing destinations and add no income, rent, population or upkeep. This first transport version has no traffic lights, vehicle ownership, parking fees or congestion simulation.
+
+Car legs use the existing compact routine clock with a faster travel speed, including saved checkpoints and elapsed-time catch-up. No offline shop income is replayed. Calmer effects keep timing without moving cars.
+
+Validation: 87 automated tests and production build; checks cover street save/rotation/storage, broken road connections, walking/driving legs, curve endpoints and all new asset budgets. Mobile Chromium at 390×844 verified the five Streets cards and resident cars traveling between parking lots, with no page errors or horizontal overflow. Physical iPhone Safari and device frame rate remain unverified.

@@ -28,6 +28,8 @@ const lidMaterial=new THREE.MeshStandardMaterial({color:'#496a61'});
 const bagMaterial=new THREE.MeshStandardMaterial({color:'#bc8753'});
 function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,people,activity,parkRotations,placements,homeKind,homeFacing}:{placements:Record<string,Point>,homeKind:string,people:People,activity:ReturnType<typeof activityWorld>,parkRotations:Record<string,number>,world:ReturnType<typeof greetingWorld>,homeFacing:number,outings:Outing[],homeId:string,resident:number,onVisit:(shopId:string,homeId:string,resident:number)=>boolean,paused:boolean,index:number,reduced:boolean}){
  const identity=useMemo(()=>residentProfile(homeId,resident),[homeId,resident]);
+ const carAsset=useGLTF(`${import.meta.env.BASE_URL}models/car.glb`);
+ const carModel=useMemo(()=>carAsset.scene.clone(true),[carAsset.scene]);const car=useRef<THREE.Group>(null);
  const {scene}=useGLTF(`${import.meta.env.BASE_URL}models/${identity.avatar}.glb?v=color-08`);
  const root=useRef<THREE.Group>(null),cup=useRef<THREE.Group>(null),bag=useRef<THREE.Group>(null),flowers=useRef<THREE.Group>(null),cone=useRef<THREE.Group>(null),book=useRef<THREE.Group>(null);
  const facingReady=useRef(false);
@@ -68,10 +70,11 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   if(flowers.current)flowers.current.visible=!reduced&&c.carrying==='flower-shop';
   if(cone.current)cone.current.visible=!reduced&&c.carrying==='ice-cream';
   if(book.current)book.current.visible=false;
+  model.copy.visible=true;if(car.current)car.current.visible=false;
   const dt=Math.min(delta,.1),outing=outings[c.trip%outings.length];
   if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
   if(bag.current)bag.current.visible=!reduced&&['bakery','market'].includes(c.carrying);
-  if(handle.tapRemaining>0&&g.visible){
+  if(handle.tapRemaining>0&&g.visible&&!handle.status.startsWith('Riding')){
    handle.tapRemaining=Math.max(0,handle.tapRemaining-dt);
    if(!reduced&&!park.current){
     actor.walking=false;face(handle.tapAngle);
@@ -126,9 +129,12 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
   else if(segment.type==='home')handle.status='At home';
   else {const next=outings[c.trip%outings.length].segments[c.segment+1];handle.status=next?.type==='visit'?`Heading to ${FAVORITES[next.stop.kind as keyof typeof FAVORITES]??'the neighborhood'}`:'Heading home';}
   actor.socialPlace=undefined;
+  const driving=segment.type==='walk'&&segment.vehicle&&!reduced;
+  model.copy.visible=!driving;if(car.current)car.current.visible=!!driving;
+  if(driving)handle.status='Riding to the next stop';
   const walking=segment.type==='walk';
   if(segment.type==='walk'){
-   const distance=(c.time-segment.start)*.38;let i=1;
+   const distance=(c.time-segment.start)*(segment.vehicle?1.4:.38);let i=1;
    while(i<segment.lengths.length-1&&segment.lengths[i]<distance)i++;
    const a=segment.points[i-1],b=segment.points[i],length=segment.lengths[i]-segment.lengths[i-1],t=length?THREE.MathUtils.clamp((distance-segment.lengths[i-1])/length,0,1):0;
    g.position.set(THREE.MathUtils.lerp(a[0],b[0],t),.025,THREE.MathUtils.lerp(a[2],b[2],t));
@@ -151,14 +157,15 @@ function Person({outings,index,reduced,homeId,resident,onVisit,paused,world,peop
    return;
   }
   if(reduced){const first=outings[0].segments[0];g.position.set(...(first.type==='walk'?first.points[0]:first.point));face(0);}
+  if(driving){for(const prop of [cup,bag,flowers,cone,book])if(prop.current)prop.current.visible=false;}
   actor.x=g.position.x;actor.z=g.position.z;
-  actor.walking=!reduced&&walking&&c.time-segment.start>1&&segment.end-c.time>1;
-  if(cup.current)cup.current.visible=!reduced&&c.carrying==='cafe';
-  if(bag.current)bag.current.visible=!reduced&&['bakery','market'].includes(c.carrying);
+  actor.walking=!reduced&&!driving&&walking&&c.time-segment.start>1&&segment.end-c.time>1;
+  if(cup.current)cup.current.visible=!reduced&&!driving&&c.carrying==='cafe';
+  if(bag.current)bag.current.visible=!reduced&&!driving&&['bakery','market'].includes(c.carrying);
   model.limbs.forEach((limb,j)=>{if(limb){limb.rotation.z=0;limb.rotation.x=reduced?0:j===3&&c.carrying?-.65:walking?Math.sin(c.phase*9+(j%2?Math.PI:0))*(j<2?.45:.3):0}});
  });
  return <group name={`resident-${homeId}-${resident}`} ref={root} scale={.32} raycast={noRaycast}>
-  <primitive object={model.copy}/>
+  <primitive object={model.copy}/><group name="resident-car" ref={car} visible={false} scale={2.1}><primitive object={carModel}/></group>
   <group ref={cup} visible={false} position={[.25,.74,.23]}><mesh geometry={cupGeometry} material={cupMaterial} raycast={noRaycast}/><mesh position={[0,.16,0]} geometry={lidGeometry} material={lidMaterial} raycast={noRaycast}/></group>
   <group ref={flowers} visible={false} position={[.25,.7,.2]}><mesh material={bagMaterial}><coneGeometry args={[.15,.3,6]}/></mesh>{[-.08,.08,0].map((x,i)=><mesh key={i} position={[x,.19,i*.04]}><sphereGeometry args={[.09,6,4]}/><meshStandardMaterial color={i%2?'#efd58a':'#db8c9b'}/></mesh>)}</group>
   <group ref={cone} visible={false} position={[.25,.8,.2]}><mesh rotation={[Math.PI,0,0]} material={bagMaterial}><coneGeometry args={[.1,.23,6]}/></mesh><mesh position={[0,.14,0]}><sphereGeometry args={[.13,8,6]}/><meshStandardMaterial color="#efa7af"/></mesh></group>
