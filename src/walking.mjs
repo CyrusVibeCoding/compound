@@ -30,10 +30,12 @@ export function walkingNetwork(buildings,placements,rotations){
   graph.get(a).add(b);graph.get(b).add(a);edges.set([a,b].sort().join('|'),[point(a),point(b)]);
  }};
  const roads=roadNetwork(buildings,placements,rotations);
- for(const path of roads.sidewalks)add(path);
+ for(const path of roads.sidewalks){const sampled=[];for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],steps=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[2]-a[2])/.25));if(i===1)sampled.push(a);for(let j=1;j<=steps;j++)sampled.push([a[0]+(b[0]-a[0])*j/steps,.03,a[2]+(b[2]-a[2])*j/steps]);}add(sampled);}
+ // Adjacent paved strips share a short walking link even when their centerlines differ.
+ const buckets=new Map();for(const path of roads.sidewalks)for(const p of path){const bx=Math.floor(p[0]/.35),bz=Math.floor(p[2]/.35);for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)for(const q of buckets.get(`${bx+dx},${bz+dz}`)??[]){const distance=Math.hypot(p[0]-q[0],p[2]-q[2]);if(distance>.001&&distance<=.32)add([p,q]);}const k=`${bx},${bz}`;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(p);}
  const streetEnds=roads.sidewalks.flatMap(p=>[p[0],p.at(-1)]);
  // Connect buildings to nearby sidewalk ends, then retain automatic pedestrian access.
- for(const entrance of entrances){const near=[...streetEnds].sort((a,b)=>Math.hypot(a[0]-entrance.point[0],a[2]-entrance.point[2])-Math.hypot(b[0]-entrance.point[0],b[2]-entrance.point[2]))[0];if(near)add(streetPath(entrance.point,near,obstacles));}
+ for(const entrance of entrances){const near=[...streetEnds].sort((a,b)=>Math.hypot(a[0]-entrance.point[0],a[2]-entrance.point[2])-Math.hypot(b[0]-entrance.point[0],b[2]-entrance.point[2]))[0];if(near){const path=streetPath(entrance.point,near,obstacles);if(Math.hypot(path.at(-1)[0]-near[0],path.at(-1)[2]-near[2])<=.36){path.push(near);add(path);}}}
  // Join each entrance to the nearest reachable prior entrance, rather than drawing
  // every possible errand. Intersecting branches share the same graph nodes.
  for(let i=1;i<entrances.length;i++){

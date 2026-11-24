@@ -45,12 +45,12 @@ export function reduce(original,action){
  case 'place':{
   if(!Object.hasOwn(BUILDINGS,action.kind)||!validId(action.id))return state;
   const existing=state.buildings.find(m=>m.id===action.id);if(existing&&existing.kind!==action.kind)return state;
-  const point=snapPlacement(state.placements,action.id,action.point);if(!point)return state;
+  const point=snapPlacement(state.placements,action.id,action.point,state.buildings,state.rotations,action.kind);if(!point)return state;
   const price=existing?0:buildingCost(state,action.kind);if(state.cash<price)return state;
   return {...state,cash:state.cash-price,buildings:existing?state.buildings:[...state.buildings,{id:action.id,kind:action.kind}],placements:{...state.placements,[action.id]:point},layoutUndo:undoFor(state)};
  }
  case 'unplace':{if(!state.placements[action.id])return state;const placements={...state.placements};delete placements[action.id];return {...state,placements,layoutUndo:undoFor(state)};}
- case 'rotate':{if(!state.placements[action.id])return state;return {...state,rotations:{...state.rotations,[action.id]:((state.rotations[action.id]??0)+1)%4},layoutUndo:undoFor(state)};}
+ case 'rotate':{if(!state.placements[action.id])return state;const rotations={...state.rotations,[action.id]:((state.rotations[action.id]??0)+1)%4};const building=state.buildings.find(b=>b.id===action.id);if(!building||!snapPlacement(state.placements,action.id,state.placements[action.id],state.buildings,rotations,building.kind))return state;return {...state,rotations,layoutUndo:undoFor(state)};}
  case 'undoLayout':return state.layoutUndo?{...state,placements:state.layoutUndo.placements,rotations:state.layoutUndo.rotations,layoutUndo:null}:state;
  case 'projectAdd':{const name=String(action.name).trim().slice(0,40);return !name||state.projects.some(p=>p.toLowerCase()===name.toLowerCase())?state:{...state,projects:[...state.projects,name]};}
  case 'add':{if(action.dueDate!==undefined&&action.dueDate!==''&&!validDate(action.dueDate))return state;if(action.pageId!=null&&!state.notes.some(n=>n.id===action.pageId))return state;if(state.tasks.some(t=>t.id===action.id))return state;const title=String(action.title).trim().slice(0,240);if(!title)return state;return {...state,tasks:[...state.tasks,{id:action.id,title,project:action.project,done:false,steps:[],notes:'',today:action.dueDate?'':dayKey(now),dueDate:action.dueDate??'',pageId:action.pageId??null}]};}

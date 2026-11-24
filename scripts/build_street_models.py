@@ -19,13 +19,29 @@ for asset in ['road','curved-road','sidewalk','parking-small','parking-big']:
   if asset=='road':
    for y in [-.65,0,.65]:strip('Lane mark',[(0,y-.12),(0,y+.12)],.025,paint,.018)
  else:
-  box('Lot surface',(0,0,.015),((1.6 if asset=='parking-small' else 2)/.7,2/.7,.03),asphalt,.015)
-  strip('Pedestrian edge',[(-1,.75),(1,.75)],.28,paving,.035)
-  count=2 if asset=='parking-small' else 6
-  for i in range(count):
-   x=(-.55 if i%2==0 else .55);y=(-.4+(i//2)*.35)
-   strip('Parking line',[(x-.24,y),(x+.24,y)],.025,paint,.035)
-  strip('Entrance',[(0,-1),(0,0)],.45,asphalt,.025)
+  half=.8 if asset=='parking-small' else 1
+  # Separate pavement, markings and curbs vertically; nothing sits inside the slab.
+  box('Lot surface',(0,0,.02),(half*2/.7,2/.7,.04),asphalt,.008)
+  strip('Pedestrian edge',[(-half,.75),(half,.75)],.28,paving,.065)
+  # Low perimeter curbs, with a real opening for the driveway.
+  for x in [-half,half]:strip('Side curb',[(x,-.98),(x,.98)],.045,paving,.07)
+  strip('Back curb',[(-half,.98),(half,.98)],.045,paving,.07)
+  for side in [-1,1]:strip('Front curb',[(side*.38,-.98),(side*half,-.98)],.045,paving,.07)
+  bays=[]
+  if asset=='parking-small':
+   for x in [-.4,.4]:bays.append((x-.29,x+.29,-.1,.57))
+  else:
+   for side in [-1,1]:
+    for z in [-.60,-.10,.40]:bays.append((-.92 if side<0 else .32,-.32 if side<0 else .92,z-.20,z+.20))
+  for left,right,front,back in bays:
+   # Three sides leave each bay visibly open toward the driving aisle.
+   if asset=='parking-small':lines=[[(left,front),(left,back)],[(left,back),(right,back)],[(right,back),(right,front)]]
+   else:
+    closed=left if right<0 else right
+    lines=[[(left,front),(right,front)],[(closed,front),(closed,back)],[(left,back),(right,back)]]
+   for line in lines:strip('Parking bay marking',line,.024,paint,.075)
+  # The driveway stays the same height as the road: no buried overlay plane.
+  strip('Driveway center',[(0,-.9),(0,-.55)],.025,paint,.075)
  export(asset)
 asset='car'
 box('Body',(0,0,.33),(.65,1.15,.28),carpaint,.09);box('Cabin',(0,.06,.58),(.53,.6,.28),windowBlue,.07)

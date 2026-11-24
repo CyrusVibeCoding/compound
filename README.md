@@ -241,3 +241,13 @@ Street pieces meet on a two-unit tile spacing. Straight and quarter-turn roads h
 Car legs use the existing compact routine clock with a faster travel speed, including saved checkpoints and elapsed-time catch-up. No offline shop income is replayed. Calmer effects keep timing without moving cars.
 
 Validation: 87 automated tests and production build; checks cover street save/rotation/storage, broken road connections, walking/driving legs, curve endpoints and all new asset budgets. Mobile Chromium at 390×844 verified the five Streets cards and resident cars traveling between parking lots, with no page errors or horizontal overflow. Physical iPhone Safari and device frame rate remain unverified.
+
+## Street connections and parking fixes (0.23.1)
+
+Diagnosis: the shared 1.9-unit building clearance also applied to narrow sidewalks, preventing connections at road edges. Walking graph edges also lacked midpoint junctions. Parking models used incomplete bay dashes, a buried entrance overlay and a pedestrian strip wider than the small lot.
+
+Street-aware polygon footprints now allow touching paved pieces while rejecting overlaps with asphalt or buildings. Sidewalks have a finer 0.1-unit placement grid; ordinary buildings retain their established clearance. Preview, purchase, moving and rotation use the same checks; blocked rotations explain that the piece needs room. Road pedestrian edges have intermediate junctions, and adjacent paved strips share short walking links.
+
+Both parking lots now have complete open-ended bays, low perimeter curbs with driveway openings, and clearly separated pavement/marking heights. The small pedestrian edge stays within its pavement and its walking path matches the model. Editable sources and thumbnails are regenerated. Existing ownership, saves, pricing and car/payment rules remain.
+
+Validation: 92 tests and production build. New regressions cover road-edge attachment in all orientations, sidewalk/asphalt and building collisions, shared placement rules, rotation/undo, midpoint pedestrian junctions and flush side-by-side paths. A 390×844 mobile Chromium flow bought a nearby sidewalk, rotated it into contact with a road, and verified persistence after reload, with no page errors or horizontal overflow. Parking thumbnails and the rendered layout were inspected. Physical iPhone Safari remains unverified.

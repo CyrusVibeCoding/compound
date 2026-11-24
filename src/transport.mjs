@@ -2,7 +2,7 @@ export const TRANSPORT=['sidewalk','road','curved-road','parking-small','parking
 export const isTransport=k=>TRANSPORT.includes(k);
 export function transportPaths(kind){
  if(kind==='sidewalk')return {walk:[[[0,-1],[0,1]]],drive:[]};
- if(kind.startsWith('parking-'))return {walk:[[[-1,.75],[1,.75]]],drive:[[[0,-1],[0,0]]]};
+ if(kind.startsWith('parking-')){const half=kind==='parking-small'?.8:1;return {walk:[[[-half,.75],[half,.75]]],drive:[[[0,-1],[0,0]]]};}
  if(kind==='road')return {walk:[[-.5,.5].map(x=>[[x,-1],[x,1]])].flat(),drive:[[[0,-1],[0,1]]]};
  if(kind==='curved-road'){const arc=r=>Array.from({length:9},(_,i)=>{const a=Math.PI-i*Math.PI/16;return [1+Math.cos(a)*r,-1+Math.sin(a)*r]});return {walk:[arc(.5),arc(1.5)],drive:[arc(1)]};}
  return {walk:[],drive:[]};
